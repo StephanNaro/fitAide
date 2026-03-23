@@ -1,14 +1,14 @@
 #include "fitAide.hpp"
-#include "routinedialog.hpp"
+#include "settingsdialog.hpp"
 #include <QtWidgets>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 
-RoutineDialog::RoutineDialog(Database& db, QWidget* parent)
+SettingsDialog::SettingsDialog(Database& db, QWidget* parent)
     : QDialog(parent), db_(db) {
-    setWindowTitle("Enter Routine");
+    setWindowTitle("Workout Settings");
     setMinimumWidth(400);
     auto* layout = new QVBoxLayout(this);
 
@@ -67,47 +67,27 @@ RoutineDialog::RoutineDialog(Database& db, QWidget* parent)
 
     // Done Button
     auto* buttonLayout = new QHBoxLayout();
-    doneButton_ = new QPushButton("Done", this);
-    connect(doneButton_, &QPushButton::clicked, this, &RoutineDialog::onDoneClicked);
+    doneButton_ = new QPushButton("Save", this);
+    connect(doneButton_, &QPushButton::clicked, this, &SettingsDialog::onDoneClicked);
     buttonLayout->addStretch();
     buttonLayout->addWidget(doneButton_);
     layout->addLayout(buttonLayout);
 }
 
-bool RoutineDialog::saveRoutine() {
+bool SettingsDialog::saveSettings() {
     int numSets = numSetsSpin_->value();
     int minReps = minRepsSpin_->value();
     int maxReps = maxRepsSpin_->value();
-    int pause = pauseSpin_->value();
-
+    int pauseSeconds = pauseSpin_->value();
     if (minReps > maxReps) {
         QMessageBox::warning(this, "Error", "Minimum reps cannot exceed maximum reps");
         return false;
     }
-
-    sqlite3_stmt* stmt;
-    const char* query = "INSERT INTO Routine (NumSets, MinReps, MaxReps, Pause) VALUES (?, ?, ?, ?);";
-    if (sqlite3_prepare_v2(db_.getDb(), query, -1, &stmt, nullptr) != SQLITE_OK) {
-        QMessageBox::critical(this, "Error", QString("Failed to prepare statement: %1").arg(sqlite3_errmsg(db_.getDb())));
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, numSets);
-    sqlite3_bind_int(stmt, 2, minReps);
-    sqlite3_bind_int(stmt, 3, maxReps);
-    sqlite3_bind_int(stmt, 4, pause);
-
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        QMessageBox::critical(this, "Error", QString("Failed to save routine: %1").arg(sqlite3_errmsg(db_.getDb())));
-        sqlite3_finalize(stmt);
-        return false;
-    }
-    sqlite3_finalize(stmt);
-    return true;
+    return db_.insertSettings(numSets, minReps, maxReps, pauseSeconds);
 }
 
-void RoutineDialog::onDoneClicked() {
-    if (saveRoutine()) {
+void SettingsDialog::onDoneClicked() {
+    if (saveSettings()) {
         accept();
     }
 }

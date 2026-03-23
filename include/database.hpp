@@ -10,32 +10,30 @@ class Database {
 public:
     Database(const std::string& db_path);
     ~Database();
-
     bool initialize();
     bool hasExercises();
-    bool hasRoutines();
-    bool insertExercise(const std::string& name, const std::string& description, const void* imageData, int imageSize);
-    bool insertRoutine(int numSets, int minReps, int maxReps, int pause);
-    bool insertUserProgress(int sequence, double currentWeight, int progress1, int progress2, int progress3, int progress4, int progress5, const std::string& dateTime);
-    bool getRoutineData(int& numSets, int& minReps, int& maxReps, int& pause);
+    bool hasSettings();
+    bool insertExercise(const std::string& name, const std::string& description,
+                        const void* imageData = nullptr, int imageSize = 0);
+    bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
+    bool insertSessionEntry(int exerciseId, double currentWeight,
+                            int set1Reps, int set2Reps, int set3Reps, int set4Reps, int set5Reps,
+                            const std::string& sessionEndedAt);
+    bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
     std::vector<int> getExerciseIds();
-
-    // Struct for exercise details and weight
     struct ExerciseDetails {
         std::string name;
         QByteArray image;
         std::string description;
-        double currentWeight;
+        double currentWeight = 0.0;
     };
     ExerciseDetails getExerciseDetails(int exerciseId);
-
-    struct UserProgress {
-        int sequence; // Added sequence
-        double currentWeight;
-        std::vector<int> progress;
+    struct LatestSessionData {
+        int exerciseId;
+        double currentWeight = 0.0;
+        std::vector<int> setReps = std::vector<int>(5, -1);
     };
-    UserProgress getUserProgress(int exerciseId);
-
+    LatestSessionData getLatestSessionData(int exerciseId);
     sqlite3* getDb() { return db_; }
 
 private:

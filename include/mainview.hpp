@@ -26,8 +26,8 @@ private:
     size_t currentExerciseIndex_;
     int numSets_;
     int pauseSeconds_;
-    std::vector<int> progress_;
-    int sequence_;
+    std::vector<int> setReps_;
+    int horrible_;  // Doesn't work without this. Should be obviated once all data is loaded, and saved, in one go.
     QLabel* nameLabel_;
     QLabel* weightLabel_;
     QLineEdit* weightEdit_;

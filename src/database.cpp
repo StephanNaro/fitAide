@@ -20,39 +20,51 @@ bool Database::initialize() {
 
     const std::string createExercise = R"(
         CREATE TABLE IF NOT EXISTS Exercise (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Name TEXT NOT NULL,
-            Image BLOB,
-            Description TEXT
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name             TEXT NOT NULL UNIQUE,
+            Image            BLOB,
+            Description      TEXT,
+            BenchNotch       TEXT,
+            MuscleGroup      TEXT,
+            IsActive         INTEGER NOT NULL DEFAULT 1 CHECK (IsActive IN (0,1))
         );
     )";
     if (!executeQuery(createExercise)) return false;
 
-    const std::string createRoutine = R"(
-        CREATE TABLE IF NOT EXISTS Routine (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            NumSets INTEGER NOT NULL,
-            MinReps INTEGER NOT NULL,
-            MaxReps INTEGER NOT NULL,
-            Pause INTEGER NOT NULL
+    const std::string createSettings = R"(
+        CREATE TABLE IF NOT EXISTS Settings (
+            user_id          INTEGER PRIMARY KEY,
+            NumSets          INTEGER DEFAULT 3,
+            MinReps          INTEGER DEFAULT 8,
+            MaxReps          INTEGER DEFAULT 12,
+            PauseSeconds     INTEGER DEFAULT 120
         );
     )";
-    if (!executeQuery(createRoutine)) return false;
+    if (!executeQuery(createSettings)) return false;
 
-    const std::string createUserProgress = R"(
-        CREATE TABLE IF NOT EXISTS UserProgress (
-            Sequence INTEGER NOT NULL,
-            Routine_id INTEGER NOT NULL,
-            CurrentWeight REAL NOT NULL,
-            Progress1 INTEGER NOT NULL,
-            Progress2 INTEGER NOT NULL,
-            Progress3 INTEGER NOT NULL,
-            Progress4 INTEGER NOT NULL,
-            Progress5 INTEGER NOT NULL,
-            DateTime TEXT NOT NULL
+    const std::string createSessionLog = R"(
+        CREATE TABLE IF NOT EXISTS SessionLog (
+            user_id          INTEGER NOT NULL DEFAULT 0,
+            exercise_id      INTEGER NOT NULL REFERENCES Exercise(id),
+            SessionEndedAt   TEXT NOT NULL,
+            WarmupWeight     REAL DEFAULT 0,
+            CurrentWeight    REAL NOT NULL,
+            Set_1_Reps       INTEGER NOT NULL DEFAULT -1,
+            Set_2_Reps       INTEGER NOT NULL DEFAULT -1,
+            Set_3_Reps       INTEGER NOT NULL DEFAULT -1,
+            Set_4_Reps       INTEGER NOT NULL DEFAULT -1,
+            Set_5_Reps       INTEGER NOT NULL DEFAULT -1,
+            NextWeight       REAL NOT NULL DEFAULT 0,
+            Notes            TEXT,
+            PRIMARY KEY (user_id, exercise_id, SessionEndedAt)
         );
     )";
-    return executeQuery(createUserProgress);
+    if (!executeQuery(createSessionLog)) return false;
+
+    // Insert default settings if missing
+    executeQuery("INSERT OR IGNORE INTO Settings (user_id) VALUES (0);");
+
+    return true;
 }
 
 bool Database::executeQuery(const std::string& query) {
@@ -82,13 +94,10 @@ bool Database::hasExercises() {
     return false;
 }
 
-bool Database::hasRoutines() {
+bool Database::hasSettings() {
     sqlite3_stmt* stmt;
-    const std::string query = "SELECT COUNT(*) FROM Routine;";
-    if (sqlite3_prepare_v2(db_, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    const char* query = "SELECT COUNT(*) FROM Settings WHERE user_id = 0;";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         int count = sqlite3_column_int(stmt, 0);
         sqlite3_finalize(stmt);
@@ -123,73 +132,82 @@ bool Database::insertExercise(const std::string& name, const std::string& descri
     return true;
 }
 
-bool Database::insertRoutine(int numSets, int minReps, int maxReps, int pause) {
+bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds) {
     sqlite3_stmt* stmt;
-    const char* query = "INSERT INTO Routine (NumSets, MinReps, MaxReps, Pause) VALUES (?, ?, ?, ?);";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, PauseSeconds) "
+                        "VALUES (0, ?, ?, ?, ?);";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, numSets);
     sqlite3_bind_int(stmt, 2, minReps);
     sqlite3_bind_int(stmt, 3, maxReps);
-    sqlite3_bind_int(stmt, 4, pause);
+    sqlite3_bind_int(stmt, 4, pauseSeconds);
 
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        std::cerr << "Failed to save routine: " << sqlite3_errmsg(db_) << std::endl;
-        sqlite3_finalize(stmt);
-        return false;
-    }
+    bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
-    return true;
+    return ok;
 }
 
-bool Database::insertUserProgress(int sequence, double currentWeight, int progress1, int progress2, int progress3, int progress4, int progress5, const std::string& dateTime) {
+bool Database::insertSessionEntry(int exerciseId, double currentWeight,
+                                  int set1, int set2, int set3, int set4, int set5,
+                                  const std::string& sessionEndedAt) {
     sqlite3_stmt* stmt;
-    const char* query = "INSERT INTO UserProgress (Sequence, Routine_id, CurrentWeight, Progress1, Progress2, Progress3, Progress4, Progress5, DateTime) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?);";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    const char* query = "INSERT INTO SessionLog (user_id, exercise_id, SessionEndedAt, "
+                        "CurrentWeight, Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps) "
+                        "VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?);";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
-    sqlite3_bind_int(stmt, 1, sequence);
-    sqlite3_bind_double(stmt, 2, currentWeight);
-    sqlite3_bind_int(stmt, 3, progress1);
-    sqlite3_bind_int(stmt, 4, progress2);
-    sqlite3_bind_int(stmt, 5, progress3);
-    sqlite3_bind_int(stmt, 6, progress4);
-    sqlite3_bind_int(stmt, 7, progress5);
-    sqlite3_bind_text(stmt, 8, dateTime.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int   (stmt, 1, exerciseId);
+    sqlite3_bind_text  (stmt, 2, sessionEndedAt.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 3, currentWeight);
+    sqlite3_bind_int   (stmt, 4, set1);
+    sqlite3_bind_int   (stmt, 5, set2);
+    sqlite3_bind_int   (stmt, 6, set3);
+    sqlite3_bind_int   (stmt, 7, set4);
+    sqlite3_bind_int   (stmt, 8, set5);
 
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        std::cerr << "Failed to save user progress: " << sqlite3_errmsg(db_) << std::endl;
-        sqlite3_finalize(stmt);
-        return false;
-    }
+    bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
-    return true;
+    return ok;
 }
 
-bool Database::getRoutineData(int& numSets, int& minReps, int& maxReps, int& pause) {
+bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds) {
     sqlite3_stmt* stmt;
-    const char* query = "SELECT NumSets, MinReps, MaxReps, Pause FROM Routine LIMIT 1;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
+    const char* query = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-        numSets = sqlite3_column_int(stmt, 0);
-        minReps = sqlite3_column_int(stmt, 1);
-        maxReps = sqlite3_column_int(stmt, 2);
-        pause = sqlite3_column_int(stmt, 3);
+        numSets      = sqlite3_column_int(stmt, 0);
+        minReps      = sqlite3_column_int(stmt, 1);
+        maxReps      = sqlite3_column_int(stmt, 2);
+        pauseSeconds = sqlite3_column_int(stmt, 3);
         sqlite3_finalize(stmt);
         return true;
     }
-
     sqlite3_finalize(stmt);
     return false;
+}
+
+Database::LatestSessionData Database::getLatestSessionData(int exerciseId) {
+    LatestSessionData data;
+    data.exerciseId = exerciseId;
+    sqlite3_stmt* stmt;
+    const char* query = "SELECT CurrentWeight, Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps "
+                        "FROM SessionLog WHERE user_id = 0 AND exercise_id = ? "
+                        "ORDER BY SessionEndedAt DESC LIMIT 1;";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return data;
+
+    sqlite3_bind_int(stmt, 1, exerciseId);
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        data.currentWeight = sqlite3_column_double(stmt, 0);
+        data.setReps[0] = sqlite3_column_int(stmt, 1);
+        data.setReps[1] = sqlite3_column_int(stmt, 2);
+        data.setReps[2] = sqlite3_column_int(stmt, 3);
+        data.setReps[3] = sqlite3_column_int(stmt, 4);
+        data.setReps[4] = sqlite3_column_int(stmt, 5);
+    }
+    sqlite3_finalize(stmt);
+    return data;
 }
 
 std::vector<int> Database::getExerciseIds() {
@@ -211,26 +229,23 @@ std::vector<int> Database::getExerciseIds() {
 
 Database::ExerciseDetails Database::getExerciseDetails(int exerciseId) {
     ExerciseDetails details;
-    details.currentWeight = 0.0; // Default weight
-
+    details.currentWeight = 0.0;
     sqlite3_stmt* stmt;
-    const char* query = "SELECT e.Name, e.Image, e.Description, up.CurrentWeight "
+    // Update join to new table (minimal change)
+    const char* query = "SELECT e.Name, e.Image, e.Description, sl.CurrentWeight "
                         "FROM Exercise e "
-                        "LEFT JOIN UserProgress up ON e.id = up.Sequence "
+                        "LEFT JOIN SessionLog sl ON e.id = sl.exercise_id "
                         "WHERE e.id = ? "
-                        "ORDER BY up.DateTime DESC LIMIT 1;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return details;
-    }
+                        "ORDER BY sl.SessionEndedAt DESC LIMIT 1;";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return details;
 
     sqlite3_bind_int(stmt, 1, exerciseId);
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         details.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
         if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-            const void* imageData = sqlite3_column_blob(stmt, 1);
-            int imageSize = sqlite3_column_bytes(stmt, 1);
-            details.image = QByteArray(static_cast<const char*>(imageData), imageSize);
+            const void* img = sqlite3_column_blob(stmt, 1);
+            int sz = sqlite3_column_bytes(stmt, 1);
+            details.image = QByteArray(static_cast<const char*>(img), sz);
         }
         details.description = sqlite3_column_type(stmt, 2) != SQLITE_NULL ?
                               reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)) : "";
@@ -238,33 +253,6 @@ Database::ExerciseDetails Database::getExerciseDetails(int exerciseId) {
             details.currentWeight = sqlite3_column_double(stmt, 3);
         }
     }
-
     sqlite3_finalize(stmt);
     return details;
-}
-
-Database::UserProgress Database::getUserProgress(int exerciseId) {
-    UserProgress progress;
-    progress.sequence = exerciseId; // Set sequence
-    progress.currentWeight = 0.0;
-    progress.progress = std::vector<int>(5, -1); // Default to 5 sets, -1 for unset
-
-    sqlite3_stmt* stmt;
-    const char* query = "SELECT CurrentWeight, Progress1, Progress2, Progress3, Progress4, Progress5 "
-                        "FROM UserProgress WHERE Sequence = ? ORDER BY DateTime DESC LIMIT 1;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return progress;
-    }
-
-    sqlite3_bind_int(stmt, 1, exerciseId);
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        progress.currentWeight = sqlite3_column_double(stmt, 0);
-        for (int i = 0; i < 5; ++i) {
-            progress.progress[i] = sqlite3_column_int(stmt, i + 1);
-        }
-    }
-
-    sqlite3_finalize(stmt);
-    return progress;
 }

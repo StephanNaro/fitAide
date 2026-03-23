@@ -14,10 +14,11 @@
 #include <iostream>
 
 MainView::MainView(Database& db, QWidget* parent)
-    : QMainWindow(parent), db_(db), currentExerciseIndex_(0), numSets_(0), pauseSeconds_(0), 
-      progress_(), sequence_(0), nameLabel_(nullptr), weightLabel_(nullptr), weightEdit_(nullptr), 
-      descriptionLabel_(nullptr), imageLabel_(nullptr), setButtons_(), countdownLabel_(nullptr), 
-      countdownTimer_(nullptr), currentEnabledButtons_(-1), remainingSeconds_(0) {
+    : QMainWindow(parent), db_(db), currentExerciseIndex_(0), numSets_(0), pauseSeconds_(0),
+      setReps_(), horrible_(0), nameLabel_(nullptr), weightLabel_(nullptr), weightEdit_(nullptr),
+      descriptionLabel_(nullptr), imageLabel_(nullptr), setButtons_(), countdownLabel_(nullptr),
+      countdownTimer_(nullptr), currentEnabledButtons_(-1), remainingSeconds_(0)
+{
     setWindowTitle("fitAide");
     setMinimumWidth(400);
 
@@ -43,8 +44,8 @@ MainView::MainView(Database& db, QWidget* parent)
     // Weight and Description (left), Image (right)
     QHBoxLayout* contentLayout = new QHBoxLayout();
     QVBoxLayout* leftLayout = new QVBoxLayout();
-    weightLabel_ = new QLabel("Weight: 0.0 kg", this); // Initial text
-    weightLabel_->setAlignment(Qt::AlignCenter); // Center-align
+    weightLabel_ = new QLabel("Weight: 0.0 kg", this);
+    weightLabel_->setAlignment(Qt::AlignCenter);
     leftLayout->addWidget(weightLabel_);
     descriptionLabel_ = new QLabel("No description", this);
     descriptionLabel_->setWordWrap(true);
@@ -81,14 +82,13 @@ MainView::MainView(Database& db, QWidget* parent)
         close();
         return;
     }
-    int minReps, maxReps, pause;
-    if (!db_.getRoutineData(numSets_, minReps, maxReps, pause)) {
-        QMessageBox::critical(this, "Error", "Failed to load routine data");
+    int minReps, maxReps;
+    if (!db_.getSettings(numSets_, minReps, maxReps, pauseSeconds_)) {
+        QMessageBox::critical(this, "Error", "Failed to load settings");
         close();
         return;
     }
-    pauseSeconds_ = pause;
-    progress_.resize(numSets_, -1);
+    setReps_.resize(numSets_, -1);
     setupSetButtons(minReps, maxReps);
 
     // Load initial exercise and progress
@@ -97,19 +97,19 @@ MainView::MainView(Database& db, QWidget* parent)
         close();
         return;
     }
-    Database::UserProgress progress = db_.getUserProgress(exerciseIds_[0]);
-    sequence_ = progress.sequence;
-    progress_.resize(numSets_, -1);
-    for (int i = 0; i < numSets_ && i < static_cast<int>(progress.progress.size()); ++i) {
-        progress_[i] = progress.progress[i];
+    auto latest = db_.getLatestSessionData(exerciseIds_[0]);
+    horrible_ = latest.exerciseId;
+    setReps_.resize(numSets_, -1);
+    for (int i = 0; i < numSets_ && i < static_cast<int>(latest.setReps.size()); ++i) {
+        setReps_[i] = latest.setReps[i];
     }
-    weightEdit_->setText(QString::number(progress.currentWeight, 'f', 2)); // Set initial weightEdit_
+    weightEdit_->setText(QString::number(latest.currentWeight, 'f', 2));
     // Highlight buttons based on initial progress
     for (int i = 0; i < numSets_; ++i) {
         for (QPushButton* button : setButtons_[i]) {
             int reps = button->text().toInt();
             button->setStyleSheet(""); // Clear previous highlights
-            if (i < static_cast<int>(progress_.size()) && progress_[i] == reps) {
+            if (i < static_cast<int>(setReps_.size()) && setReps_[i] == reps) {
                 button->setStyleSheet("background-color: yellow;");
             }
         }
@@ -158,7 +158,7 @@ void MainView::setupSetButtons(int minReps, int maxReps) {
 }
 
 void MainView::onRepsButtonClicked(int setIndex, int reps) {
-    progress_[setIndex] = reps;
+    setReps_[setIndex] = reps;
     // Reset stylesheet for all buttons in this set
     for (QPushButton* button : setButtons_[setIndex]) {
         button->setStyleSheet("");
@@ -212,24 +212,24 @@ void MainView::updateCountdown() {
             saveProgress();
             // Update progress for next exercise
             if (currentExerciseIndex_ < exerciseIds_.size()) {
-                Database::UserProgress progress = db_.getUserProgress(exerciseIds_[currentExerciseIndex_]);
-                sequence_ = progress.sequence;
-                progress_.resize(numSets_, -1);
-                for (int i = 0; i < numSets_ && i < static_cast<int>(progress.progress.size()); ++i) {
-                    progress_[i] = progress.progress[i];
+                Database::LatestSessionData latest = db_.getLatestSessionData(exerciseIds_[currentExerciseIndex_]);
+                horrible_ = latest.exerciseId;
+                setReps_.resize(numSets_, -1);
+                for (int i = 0; i < numSets_ && i < static_cast<int>(latest.setReps.size()); ++i) {
+                    setReps_[i] = latest.setReps[i];
                 }
                 // Highlight buttons for next exercise
                 for (int i = 0; i < numSets_; ++i) {
                     for (QPushButton* button : setButtons_[i]) {
                         int reps = button->text().toInt();
                         button->setStyleSheet(""); // Clear previous highlights
-                        if (i < static_cast<int>(progress_.size()) && progress_[i] == reps) {
+                        if (i < static_cast<int>(setReps_.size()) && setReps_[i] == reps) {
                             button->setStyleSheet("background-color: yellow;");
                         }
                     }
                 }
                 // Set weightEdit_ for next exercise
-                weightEdit_->setText(QString::number(progress.currentWeight, 'f', 2));
+                weightEdit_->setText(QString::number(latest.currentWeight, 'f', 2));
             }
             // Exit after last set of last exercise
             if (currentExerciseIndex_ >= exerciseIds_.size()) {
@@ -245,14 +245,19 @@ void MainView::updateCountdown() {
 
 void MainView::saveProgress() {
     double weight = weightEdit_->text().toDouble();
-    std::vector<int> progress = progress_;
-    progress.resize(5, -1); // Pad with -1
-    QString dateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    if (!db_.insertUserProgress(sequence_, weight, progress[0], progress[1], progress[2], progress[3], progress[4], dateTime.toStdString())) {
-        QMessageBox::critical(this, "Error", "Failed to save progress");
+    int reps[5] = {-1, -1, -1, -1, -1};
+    for (size_t i = 0; i < setReps_.size() && i < 5; ++i) {
+        reps[static_cast<int>(i)] = setReps_[i];
     }
-    progress_.clear();
-    progress_.resize(numSets_, -1);
+    QString sessionTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    if (!db_.insertSessionEntry(
+            horrible_,  // This might be correct later: exerciseIds_[currentExerciseIndex_],
+            weight,
+            reps[0], reps[1], reps[2], reps[3], reps[4],
+            sessionTime.toStdString())) {
+        QMessageBox::critical(this, "Error", "Failed to save session entry");
+    }
+    setReps_.assign(numSets_, -1);   // reset
 }
 
 void MainView::nextExercise() {

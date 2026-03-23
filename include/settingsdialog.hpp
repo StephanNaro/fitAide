@@ -1,5 +1,5 @@
-#ifndef ROUTINEDIALOG_HPP
-#define ROUTINEDIALOG_HPP
+#ifndef SETTINGSDIALOG_HPP
+#define SETTINGSDIALOG_HPP
 
 #include "database.hpp"
 #include <QDialog>
@@ -7,15 +7,13 @@
 #include <QSpinBox>
 #include <QPushButton>
 
-class RoutineDialog : public QDialog {
+class SettingsDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit RoutineDialog(Database& db, QWidget* parent = nullptr);
-    ~RoutineDialog() = default;
-
+    explicit SettingsDialog(Database& db, QWidget* parent = nullptr);
+    ~SettingsDialog() = default;
 private slots:
     void onDoneClicked();
-
 private:
     Database& db_;
     QSpinBox* numSetsSpin_;
@@ -27,8 +25,7 @@ private:
     QSpinBox* pauseSpin_;
     QSlider* pauseSlider_;
     QPushButton* doneButton_;
-
-    bool saveRoutine();
+    bool saveSettings();
 };
 
-#endif // ROUTINEDIALOG_HPP
+#endif // SETTINGSDIALOG_HPP
