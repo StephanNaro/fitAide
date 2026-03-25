@@ -1,5 +1,7 @@
 #include "database.hpp"
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 Database::Database(const std::string& db_path) : db_(nullptr) {
     int rc = sqlite3_open(db_path.c_str(), &db_);
@@ -13,6 +15,17 @@ Database::~Database() {
     if (db_) {
         sqlite3_close(db_);
     }
+}
+
+bool Database::executeQuery(const std::string& query) {
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(db_, query.c_str(), nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "SQL error: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+    return true;
 }
 
 bool Database::initialize() {
@@ -42,11 +55,11 @@ bool Database::initialize() {
     )";
     if (!executeQuery(createSettings)) return false;
 
-    const std::string createSessionLog = R"(
-        CREATE TABLE IF NOT EXISTS SessionLog (
+    const std::string createWorkoutLog = R"(
+        CREATE TABLE IF NOT EXISTS WorkoutLog (
             user_id          INTEGER NOT NULL DEFAULT 0,
             exercise_id      INTEGER NOT NULL REFERENCES Exercise(id),
-            SessionEndedAt   TEXT NOT NULL,
+            WorkoutEndedAt   TEXT NOT NULL,
             WarmupWeight     REAL DEFAULT 0,
             CurrentWeight    REAL NOT NULL,
             Set_1_Reps       INTEGER NOT NULL DEFAULT -1,
@@ -56,26 +69,28 @@ bool Database::initialize() {
             Set_5_Reps       INTEGER NOT NULL DEFAULT -1,
             NextWeight       REAL NOT NULL DEFAULT 0,
             Notes            TEXT,
-            PRIMARY KEY (user_id, exercise_id, SessionEndedAt)
+            PRIMARY KEY (user_id, exercise_id, WorkoutEndedAt)
         );
     )";
-    if (!executeQuery(createSessionLog)) return false;
+    if (!executeQuery(createWorkoutLog)) return false;
 
     // Insert default settings if missing
-    executeQuery("INSERT OR IGNORE INTO Settings (user_id) VALUES (0);");
+    //executeQuery("INSERT OR IGNORE INTO Settings (user_id) VALUES (0);");
 
     return true;
 }
 
-bool Database::executeQuery(const std::string& query) {
-    char* errMsg = nullptr;
-    int rc = sqlite3_exec(db_, query.c_str(), nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        std::cerr << "SQL error: " << errMsg << std::endl;
-        sqlite3_free(errMsg);
-        return false;
+bool Database::hasSettings() {
+    sqlite3_stmt* stmt;
+    const char* query = "SELECT COUNT(*) FROM Settings WHERE user_id = 0;";
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        int count = sqlite3_column_int(stmt, 0);
+        sqlite3_finalize(stmt);
+        return count > 0;
     }
-    return true;
+    sqlite3_finalize(stmt);
+    return false;
 }
 
 bool Database::hasExercises() {
@@ -94,17 +109,20 @@ bool Database::hasExercises() {
     return false;
 }
 
-bool Database::hasSettings() {
+bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds) {
     sqlite3_stmt* stmt;
-    const char* query = "SELECT COUNT(*) FROM Settings WHERE user_id = 0;";
+    const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, PauseSeconds) "
+                        "VALUES (0, ?, ?, ?, ?);";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        int count = sqlite3_column_int(stmt, 0);
-        sqlite3_finalize(stmt);
-        return count > 0;
-    }
+
+    sqlite3_bind_int(stmt, 1, numSets);
+    sqlite3_bind_int(stmt, 2, minReps);
+    sqlite3_bind_int(stmt, 3, maxReps);
+    sqlite3_bind_int(stmt, 4, pauseSeconds);
+
+    bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
-    return false;
+    return ok;
 }
 
 bool Database::insertExercise(const std::string& name, const std::string& description, const void* imageData, int imageSize) {
@@ -132,33 +150,17 @@ bool Database::insertExercise(const std::string& name, const std::string& descri
     return true;
 }
 
-bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds) {
-    sqlite3_stmt* stmt;
-    const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, PauseSeconds) "
-                        "VALUES (0, ?, ?, ?, ?);";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
-
-    sqlite3_bind_int(stmt, 1, numSets);
-    sqlite3_bind_int(stmt, 2, minReps);
-    sqlite3_bind_int(stmt, 3, maxReps);
-    sqlite3_bind_int(stmt, 4, pauseSeconds);
-
-    bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
-    sqlite3_finalize(stmt);
-    return ok;
-}
-
-bool Database::insertSessionEntry(int exerciseId, double currentWeight,
+bool Database::insertWorkoutEntry(int exerciseId, double currentWeight,
                                   int set1, int set2, int set3, int set4, int set5,
-                                  const std::string& sessionEndedAt) {
+                                  const std::string& workoutEndedAt) {
     sqlite3_stmt* stmt;
-    const char* query = "INSERT INTO SessionLog (user_id, exercise_id, SessionEndedAt, "
+    const char* query = "INSERT INTO WorkoutLog (user_id, exercise_id, WorkoutEndedAt, "
                         "CurrentWeight, Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps) "
                         "VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?);";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     sqlite3_bind_int   (stmt, 1, exerciseId);
-    sqlite3_bind_text  (stmt, 2, sessionEndedAt.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text  (stmt, 2, workoutEndedAt.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(stmt, 3, currentWeight);
     sqlite3_bind_int   (stmt, 4, set1);
     sqlite3_bind_int   (stmt, 5, set2);
@@ -188,71 +190,82 @@ bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseS
     return false;
 }
 
-Database::LatestSessionData Database::getLatestSessionData(int exerciseId) {
-    LatestSessionData data;
-    data.exerciseId = exerciseId;
-    sqlite3_stmt* stmt;
-    const char* query = "SELECT CurrentWeight, Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps "
-                        "FROM SessionLog WHERE user_id = 0 AND exercise_id = ? "
-                        "ORDER BY SessionEndedAt DESC LIMIT 1;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return data;
+Database::WorkoutData Database::loadFullWorkoutData() {
+    WorkoutData workout;
 
-    sqlite3_bind_int(stmt, 1, exerciseId);
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        data.currentWeight = sqlite3_column_double(stmt, 0);
-        data.setReps[0] = sqlite3_column_int(stmt, 1);
-        data.setReps[1] = sqlite3_column_int(stmt, 2);
-        data.setReps[2] = sqlite3_column_int(stmt, 3);
-        data.setReps[3] = sqlite3_column_int(stmt, 4);
-        data.setReps[4] = sqlite3_column_int(stmt, 5);
-    }
-    sqlite3_finalize(stmt);
-    return data;
-}
-
-std::vector<int> Database::getExerciseIds() {
-    std::vector<int> ids;
-    sqlite3_stmt* stmt;
-    const char* query = "SELECT id FROM Exercise ORDER BY id;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
-        return ids;
-    }
-
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        ids.push_back(sqlite3_column_int(stmt, 0));
-    }
-
-    sqlite3_finalize(stmt);
-    return ids;
-}
-
-Database::ExerciseDetails Database::getExerciseDetails(int exerciseId) {
-    ExerciseDetails details;
-    details.currentWeight = 0.0;
-    sqlite3_stmt* stmt;
-    // Update join to new table (minimal change)
-    const char* query = "SELECT e.Name, e.Image, e.Description, sl.CurrentWeight "
-                        "FROM Exercise e "
-                        "LEFT JOIN SessionLog sl ON e.id = sl.exercise_id "
-                        "WHERE e.id = ? "
-                        "ORDER BY sl.SessionEndedAt DESC LIMIT 1;";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return details;
-
-    sqlite3_bind_int(stmt, 1, exerciseId);
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        details.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-        if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-            const void* img = sqlite3_column_blob(stmt, 1);
-            int sz = sqlite3_column_bytes(stmt, 1);
-            details.image = QByteArray(static_cast<const char*>(img), sz);
-        }
-        details.description = sqlite3_column_type(stmt, 2) != SQLITE_NULL ?
-                              reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)) : "";
-        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
-            details.currentWeight = sqlite3_column_double(stmt, 3);
+    // 1. Load settings
+    {
+        sqlite3_stmt* stmt = nullptr;
+        const char* q = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
+        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                workout.numSets      = sqlite3_column_int(stmt, 0);
+                workout.minReps      = sqlite3_column_int(stmt, 1);
+                workout.maxReps      = sqlite3_column_int(stmt, 2);
+                workout.pauseSeconds = sqlite3_column_int(stmt, 3);
+            }
+            sqlite3_finalize(stmt);
         }
     }
-    sqlite3_finalize(stmt);
-    return details;
+
+    // 2. Load ALL active exercises + their MOST RECENT data (if any) — ONE query
+    {
+        sqlite3_stmt* stmt = nullptr;
+        const char* q = R"(
+            SELECT
+                e.id,
+                e.Name,
+                e.Image,
+                e.Description,
+                COALESCE(sl.CurrentWeight, 0.0),
+                COALESCE(sl.Set_1_Reps, -1),
+                COALESCE(sl.Set_2_Reps, -1),
+                COALESCE(sl.Set_3_Reps, -1),
+                COALESCE(sl.Set_4_Reps, -1),
+                COALESCE(sl.Set_5_Reps, -1)
+            FROM Exercise e
+            LEFT JOIN WorkoutLog sl
+                ON sl.exercise_id = e.id
+               AND sl.user_id = 0
+               AND sl.WorkoutEndedAt = (
+                    SELECT MAX(WorkoutEndedAt)
+                    FROM WorkoutLog
+                    WHERE exercise_id = e.id AND user_id = 0
+               )
+            WHERE e.IsActive = 1
+            ORDER BY e.id;
+        )";
+
+        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK) {
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                WorkoutData::ExerciseEntry ex;
+                ex.exerciseId    = sqlite3_column_int(stmt, 0);
+                ex.name          = sqlite3_column_text(stmt, 1)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1))
+                                   : "";
+                if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
+                    const void* data = sqlite3_column_blob(stmt, 2);
+                    int size = sqlite3_column_bytes(stmt, 2);
+                    ex.image = QByteArray(static_cast<const char*>(data), size);
+                }
+                ex.description   = sqlite3_column_text(stmt, 3)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
+                                   : "";
+                ex.currentWeight = sqlite3_column_double(stmt, 4);
+
+                ex.setReps = {
+                    sqlite3_column_int(stmt, 5),
+                    sqlite3_column_int(stmt, 6),
+                    sqlite3_column_int(stmt, 7),
+                    sqlite3_column_int(stmt, 8),
+                    sqlite3_column_int(stmt, 9)
+                };
+
+                workout.exercises.push_back(std::move(ex));
+            }
+            sqlite3_finalize(stmt);
+        }
+    }
+
+    return workout;
 }

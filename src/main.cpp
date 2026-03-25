@@ -1,5 +1,5 @@
 #include "fitAide.hpp"
-#include "mainview.hpp"
+#include "workoutview.hpp"
 #include "exercisedialog.hpp"
 #include "settingsdialog.hpp"
 #include <QApplication>
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    MainView mainView(db);
-    mainView.show();
+    WorkoutView workoutView(db);
+    workoutView.show();
     return app.exec();
 }

@@ -16,24 +16,27 @@ public:
     bool insertExercise(const std::string& name, const std::string& description,
                         const void* imageData = nullptr, int imageSize = 0);
     bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
-    bool insertSessionEntry(int exerciseId, double currentWeight,
+    bool insertWorkoutEntry(int exerciseId, double currentWeight,
                             int set1Reps, int set2Reps, int set3Reps, int set4Reps, int set5Reps,
-                            const std::string& sessionEndedAt);
+                            const std::string& workoutEndedAt);
     bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
-    std::vector<int> getExerciseIds();
-    struct ExerciseDetails {
-        std::string name;
-        QByteArray image;
-        std::string description;
-        double currentWeight = 0.0;
+    struct WorkoutData {
+        struct ExerciseEntry {
+            int exerciseId = 0;
+            std::string name;
+            QByteArray image;
+            std::string description;
+            double currentWeight = 0.0;
+            std::vector<int> setReps = std::vector<int>(5, -1);
+        };
+
+        std::vector<ExerciseEntry> exercises;
+        int numSets = 3;
+        int minReps = 8;
+        int maxReps = 12;
+        int pauseSeconds = 120;
     };
-    ExerciseDetails getExerciseDetails(int exerciseId);
-    struct LatestSessionData {
-        int exerciseId;
-        double currentWeight = 0.0;
-        std::vector<int> setReps = std::vector<int>(5, -1);
-    };
-    LatestSessionData getLatestSessionData(int exerciseId);
+    WorkoutData loadFullWorkoutData();
     sqlite3* getDb() { return db_; }
 
 private:
