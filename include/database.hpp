@@ -16,10 +16,6 @@ public:
     bool insertExercise(const std::string& name, const std::string& description,
                         const void* imageData = nullptr, int imageSize = 0);
     bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
-    bool insertWorkoutEntry(int exerciseId, double currentWeight,
-                            int set1Reps, int set2Reps, int set3Reps, int set4Reps, int set5Reps,
-                            const std::string& workoutEndedAt);
-    bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
     struct WorkoutData {
         struct ExerciseEntry {
             int exerciseId = 0;
@@ -36,6 +32,8 @@ public:
         int maxReps = 12;
         int pauseSeconds = 120;
     };
+    bool insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime);
+    bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
     WorkoutData loadFullWorkoutData();
     sqlite3* getDb() { return db_; }
 

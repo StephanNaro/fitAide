@@ -1,5 +1,5 @@
-#ifndef WorkoutView_HPP
-#define WorkoutView_HPP
+#ifndef WORKOUTVIEW_HPP
+#define WORKOUTVIEW_HPP
 
 #include "database.hpp"
 #include <QMainWindow>
@@ -38,12 +38,13 @@ private:
     QLabel* countdownLabel_;
     QTimer* countdownTimer_;
     int remainingSeconds_;
-    QString workoutTime_;
+
+    bool workoutInProgress_ = false;
 
     void createMenuAndLayout();
     void createSetButtons(int minReps, int maxReps);
     void populateNameDescriptionImageWeight(size_t index);
-    void saveProgress();
+    void highlightButtons(size_t index);
 };
 
-#endif // WorkoutView_HPP
+#endif // WORKOUTVIEW_HPP
