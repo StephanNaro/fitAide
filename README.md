@@ -25,7 +25,7 @@ Designed for simple home/garage gym sessions with dumbbells or fixed equipment. 
 ## Screenshots
 
 A workout in progress, with the recently completed sets at the top, and information about the upcoming exercise below.
-![Workout in Progress](resources/screenshot.jpg "Workout in Progress").
+![Workout in Progress](resources/screenshot.png "Workout in Progress").
 
 ## Usage
 
