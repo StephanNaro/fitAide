@@ -1,7 +1,8 @@
 #include "fitAide.hpp"
-#include "workoutview.hpp"
-#include "exercisedialog.hpp"
-#include "settingsdialog.hpp"
+#include "database/database.hpp"
+#include "views/workoutview.hpp"
+#include "dialogs/exercisedialog.hpp"
+#include "dialogs/settingsdialog.hpp"
 #include <QApplication>
 #include <QtWidgets>
 #include <QStringLiteral>
@@ -12,7 +13,8 @@
 #include <QMessageBox>
 #include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     QApplication app(argc, argv);
 
     // Set application name for registry path
@@ -24,7 +26,8 @@ int main(int argc, char* argv[]) {
 
     // Check if path is valid (non-empty and file exists)
     bool validPath = false;
-    if (!dbPath.isEmpty() && QFileInfo::exists(dbPath)) {
+    if (!dbPath.isEmpty() && QFileInfo::exists(dbPath))
+    {
         validPath = true;
     } else {
         // Prompt user for database file location with suggested filename
@@ -38,13 +41,14 @@ int main(int argc, char* argv[]) {
             dialog.setAcceptMode(QFileDialog::AcceptOpen);
             dialog.setFileMode(QFileDialog::AnyFile); // Allows selecting non-existent files
 
-            if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) {
-                QMessageBox::question(
-                    nullptr,
-                    "Exit",
+            if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty())
+            {
+                auto reply = QMessageBox::question(
+                    nullptr, "Exit",
                     QStringLiteral("No database selected. Exit %1?").arg(fitAide::APP_NAME),
-                    QMessageBox::Yes | QMessageBox::No
-                );
+                    QMessageBox::Yes | QMessageBox::No);
+                if (reply == QMessageBox::Yes)
+                    return 0;          // or std::exit(0);
                 continue;
             }
 
@@ -58,19 +62,23 @@ int main(int argc, char* argv[]) {
 
     // Initialize database with the selected path
     Database db(dbPath.toStdString());
-    if (!db.initialize()) {
+    if (!db.initialize())
+    {
         std::cerr << "Failed to initialize database" << std::endl;
         return 1;
     }
 
-    if (!db.hasExercises()) {
+    if (!db.hasExercises())
+    {
         ExerciseDialog dialog(db);
         if (dialog.exec() == QDialog::Rejected) return 0;
     }
 
-    if (!db.hasSettings()) {
+    if (!db.hasSettings())
+    {
         SettingsDialog dialog(db);
-        if (dialog.exec() == QDialog::Rejected) {
+        if (dialog.exec() == QDialog::Rejected)
+        {
             std::cout << "Settings dialog cancelled, exiting..." << std::endl;
             return 0;
         }

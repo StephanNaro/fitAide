@@ -1,13 +1,11 @@
-#include "fitAide.hpp"
 #include "settingsdialog.hpp"
-#include <QtWidgets>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 
 SettingsDialog::SettingsDialog(Database& db, QWidget* parent)
-    : QDialog(parent), db_(db) {
+    : QDialog(parent), db_(db)
+{
     setWindowTitle("Workout Settings");
     setMinimumWidth(400);
     auto* layout = new QVBoxLayout(this);
@@ -74,20 +72,24 @@ SettingsDialog::SettingsDialog(Database& db, QWidget* parent)
     layout->addLayout(buttonLayout);
 }
 
-bool SettingsDialog::saveSettings() {
+bool SettingsDialog::saveSettings()
+{
     int numSets = numSetsSpin_->value();
     int minReps = minRepsSpin_->value();
     int maxReps = maxRepsSpin_->value();
     int pauseSeconds = pauseSpin_->value();
-    if (minReps > maxReps) {
+    if (minReps > maxReps)
+    {
         QMessageBox::warning(this, "Error", "Minimum reps cannot exceed maximum reps");
         return false;
     }
     return db_.insertSettings(numSets, minReps, maxReps, pauseSeconds);
 }
 
-void SettingsDialog::onDoneClicked() {
-    if (saveSettings()) {
+void SettingsDialog::onDoneClicked()
+{
+    if (saveSettings())
+    {
         accept();
     }
 }

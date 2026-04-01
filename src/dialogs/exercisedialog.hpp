@@ -1,14 +1,16 @@
 #ifndef EXERCISEDIALOG_HPP
 #define EXERCISEDIALOG_HPP
 
-#include "database.hpp"
+#include "database/database.hpp"
 #include <QDialog>
 #include <QLineEdit>
+#include <QLabel>
 #include <QTextEdit>
 #include <QPushButton>
-#include <QLabel>
+#include <QByteArray>
 
-class ExerciseDialog : public QDialog {
+class ExerciseDialog : public QDialog
+{
     Q_OBJECT
 public:
     explicit ExerciseDialog(Database& db, QWidget* parent = nullptr);
@@ -31,4 +33,4 @@ private:
     bool saveExercise();
 };
 
-#endif // EXERCISEDIALOG_HPP
+#endif

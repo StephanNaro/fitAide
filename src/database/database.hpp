@@ -6,7 +6,8 @@
 #include <vector>
 #include <QByteArray>
 
-class Database {
+class Database
+{
 public:
     Database(const std::string& db_path);
     ~Database();
@@ -22,8 +23,15 @@ public:
             std::string name;
             QByteArray image;
             std::string description;
+            double warmupWeight = 0.0;
             double currentWeight = 0.0;
             std::vector<int> setReps = std::vector<int>(5, -1);
+            double nextWeight = 0.0;
+            // ── New fields (loaded now so future UI changes are easy) ──
+            std::string benchNotch;
+            std::string muscleGroup;
+            std::string notes;
+            bool isActive = true;
         };
 
         std::vector<ExerciseEntry> exercises;
@@ -34,7 +42,7 @@ public:
     };
     bool insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime);
     bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
-    WorkoutData loadFullWorkoutData();
+    WorkoutData loadWorkoutData();
     sqlite3* getDb() { return db_; }
 
 private:
@@ -42,4 +50,4 @@ private:
     bool executeQuery(const std::string& query);
 };
 
-#endif // DATABASE_HPP
+#endif

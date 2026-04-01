@@ -1,19 +1,15 @@
-#include "fitAide.hpp"
 #include "exercisedialog.hpp"
-#include <QtWidgets>
-#include <QLineEdit>
-#include <QTextEdit>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QClipboard>
-#include <QImage>
-#include <QPixmap>
+#include <QApplication>
 #include <QBuffer>
+#include <QIODevice>
+#include <QMessageLogger>
 #include <QMessageBox>
-#include <QFontMetrics>
 
 ExerciseDialog::ExerciseDialog(Database& db, QWidget* parent)
-    : QDialog(parent), db_(db), imageData_() {
+    : QDialog(parent), db_(db), imageData_()
+{
     setWindowTitle("Enter Exercise");
     setMinimumWidth(400); // Improved layout
     auto* layout = new QVBoxLayout(this);
@@ -56,10 +52,12 @@ ExerciseDialog::ExerciseDialog(Database& db, QWidget* parent)
     layout->addLayout(buttonLayout);
 }
 
-void ExerciseDialog::onPasteImage() {
+void ExerciseDialog::onPasteImage()
+{
     QClipboard* clipboard = QApplication::clipboard();
     QImage image = clipboard->image();
-    if (image.isNull()) {
+    if (image.isNull())
+    {
         QMessageBox::warning(this, "Error", "No image in clipboard");
         return;
     }
@@ -71,11 +69,13 @@ void ExerciseDialog::onPasteImage() {
     buffer.close();
 }
 
-bool ExerciseDialog::saveExercise() {
+bool ExerciseDialog::saveExercise()
+{
     QString name = nameEdit_->text().trimmed();
     QString description = descriptionEdit_->toPlainText().trimmed();
 
-    if (name.isEmpty()) {
+    if (name.isEmpty())
+    {
         QMessageBox::warning(this, "Error", "Name is required");
         return false;
     }
@@ -89,8 +89,10 @@ bool ExerciseDialog::saveExercise() {
     return success;
 }
 
-void ExerciseDialog::onNextClicked() {
-    if (saveExercise()) {
+void ExerciseDialog::onNextClicked()
+{
+    if (saveExercise())
+    {
         nameEdit_->clear();
         imageLabel_->setText("No image");
         imageData_.clear();
@@ -99,8 +101,10 @@ void ExerciseDialog::onNextClicked() {
     }
 }
 
-void ExerciseDialog::onDoneClicked() {
-    if (saveExercise()) {
+void ExerciseDialog::onDoneClicked()
+{
+    if (saveExercise())
+    {
         accept();
     }
 }

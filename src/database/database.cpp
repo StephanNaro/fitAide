@@ -1,26 +1,30 @@
 #include "database.hpp"
 #include <iostream>
-#include <vector>
-#include <algorithm>
 
-Database::Database(const std::string& db_path) : db_(nullptr) {
+Database::Database(const std::string& db_path) : db_(nullptr)
+{
     int rc = sqlite3_open(db_path.c_str(), &db_);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK)
+    {
         std::cerr << "Cannot open database: " << sqlite3_errmsg(db_) << std::endl;
         db_ = nullptr;
     }
 }
 
-Database::~Database() {
-    if (db_) {
+Database::~Database()
+{
+    if (db_)
+    {
         sqlite3_close(db_);
     }
 }
 
-bool Database::executeQuery(const std::string& query) {
+bool Database::executeQuery(const std::string& query)
+{
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db_, query.c_str(), nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK)
+    {
         std::cerr << "SQL error: " << errMsg << std::endl;
         sqlite3_free(errMsg);
         return false;
@@ -28,7 +32,8 @@ bool Database::executeQuery(const std::string& query) {
     return true;
 }
 
-bool Database::initialize() {
+bool Database::initialize()
+{
     if (!db_) return false;
 
     const std::string createExercise = R"(
@@ -74,17 +79,16 @@ bool Database::initialize() {
     )";
     if (!executeQuery(createWorkoutLog)) return false;
 
-    // Insert default settings if missing
-    //executeQuery("INSERT OR IGNORE INTO Settings (user_id) VALUES (0);");
-
     return true;
 }
 
-bool Database::hasSettings() {
+bool Database::hasSettings()
+{
     sqlite3_stmt* stmt;
     const char* query = "SELECT COUNT(*) FROM Settings WHERE user_id = 0;";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
         int count = sqlite3_column_int(stmt, 0);
         sqlite3_finalize(stmt);
         return count > 0;
@@ -93,14 +97,17 @@ bool Database::hasSettings() {
     return false;
 }
 
-bool Database::hasExercises() {
+bool Database::hasExercises()
+{
     sqlite3_stmt* stmt;
     const std::string query = "SELECT COUNT(*) FROM Exercise;";
-    if (sqlite3_prepare_v2(db_, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db_, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK)
+    {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
         return false;
     }
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
         int count = sqlite3_column_int(stmt, 0);
         sqlite3_finalize(stmt);
         return count > 0;
@@ -109,7 +116,8 @@ bool Database::hasExercises() {
     return false;
 }
 
-bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds) {
+bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds)
+{
     sqlite3_stmt* stmt;
     const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, PauseSeconds) "
                         "VALUES (0, ?, ?, ?, ?);";
@@ -125,23 +133,27 @@ bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSe
     return ok;
 }
 
-bool Database::insertExercise(const std::string& name, const std::string& description, const void* imageData, int imageSize) {
+bool Database::insertExercise(const std::string& name, const std::string& description, const void* imageData, int imageSize)
+{
     sqlite3_stmt* stmt;
     const char* query = "INSERT INTO Exercise (Name, Image, Description) VALUES (?, ?, ?);";
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK)
+    {
         std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
         return false;
     }
 
     sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    if (imageData && imageSize > 0) {
+    if (imageData && imageSize > 0)
+    {
         sqlite3_bind_blob(stmt, 2, imageData, imageSize, SQLITE_TRANSIENT);
     } else {
         sqlite3_bind_null(stmt, 2);
     }
     sqlite3_bind_text(stmt, 3, description.c_str(), -1, SQLITE_TRANSIENT);
 
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
+    if (sqlite3_step(stmt) != SQLITE_DONE)
+    {
         std::cerr << "Failed to save exercise: " << sqlite3_errmsg(db_) << std::endl;
         sqlite3_finalize(stmt);
         return false;
@@ -150,59 +162,65 @@ bool Database::insertExercise(const std::string& name, const std::string& descri
     return true;
 }
 
-bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime) {
+bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime)
+{
     if (workoutData.exercises.empty()) return true;
 
     sqlite3_stmt* stmt = nullptr;
     const char* query = R"(
         INSERT INTO WorkoutLog
-            (user_id, exercise_id, WorkoutEndedAt, CurrentWeight,
-             Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps)
-        VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?);
+            (user_id, exercise_id, WorkoutEndedAt,
+             WarmupWeight, CurrentWeight,
+             Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps,
+             NextWeight, Notes)
+        VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK)
+    {
         std::cerr << "Failed to prepare insertWorkoutData: " << sqlite3_errmsg(db_) << std::endl;
         return false;
     }
 
     bool allOk = true;
-
-    for (const auto& ex : workoutData.exercises) {
-        // Pad reps to 5
+    for (const auto& ex : workoutData.exercises)
+    {
         int reps[5] = {-1, -1, -1, -1, -1};
-        for (size_t i = 0; i < ex.setReps.size() && i < 5; ++i) {
+        for (size_t i = 0; i < ex.setReps.size() && i < 5; ++i)
             reps[i] = ex.setReps[i];
-        }
 
         sqlite3_bind_int   (stmt, 1, ex.exerciseId);
         sqlite3_bind_text  (stmt, 2, workoutTime.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_double(stmt, 3, ex.currentWeight);
-        sqlite3_bind_int   (stmt, 4, reps[0]);
-        sqlite3_bind_int   (stmt, 5, reps[1]);
-        sqlite3_bind_int   (stmt, 6, reps[2]);
-        sqlite3_bind_int   (stmt, 7, reps[3]);
-        sqlite3_bind_int   (stmt, 8, reps[4]);
+        sqlite3_bind_double(stmt, 3, ex.warmupWeight);
+        sqlite3_bind_double(stmt, 4, ex.currentWeight);
+        sqlite3_bind_int   (stmt, 5, reps[0]);
+        sqlite3_bind_int   (stmt, 6, reps[1]);
+        sqlite3_bind_int   (stmt, 7, reps[2]);
+        sqlite3_bind_int   (stmt, 8, reps[3]);
+        sqlite3_bind_int   (stmt, 9, reps[4]);
+        sqlite3_bind_double(stmt, 10, ex.nextWeight);
+        sqlite3_bind_text  (stmt, 11, ex.notes.c_str(), -1, SQLITE_TRANSIENT);
 
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
+        if (sqlite3_step(stmt) != SQLITE_DONE)
+        {
             std::cerr << "Failed to insert exercise " << ex.exerciseId << ": "
                       << sqlite3_errmsg(db_) << std::endl;
             allOk = false;
         }
-
-        sqlite3_reset(stmt);   // important for reuse
+        sqlite3_reset(stmt);
     }
-
     sqlite3_finalize(stmt);
     return allOk;
 }
 
-bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds) {
+bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds)
+{
     sqlite3_stmt* stmt;
     const char* query = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
         numSets      = sqlite3_column_int(stmt, 0);
         minReps      = sqlite3_column_int(stmt, 1);
         maxReps      = sqlite3_column_int(stmt, 2);
@@ -214,15 +232,18 @@ bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseS
     return false;
 }
 
-Database::WorkoutData Database::loadFullWorkoutData() {
+Database::WorkoutData Database::loadWorkoutData()
+{
     WorkoutData workout;
 
     // 1. Load settings
     {
         sqlite3_stmt* stmt = nullptr;
         const char* q = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
-        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK) {
-            if (sqlite3_step(stmt) == SQLITE_ROW) {
+        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK)
+        {
+            if (sqlite3_step(stmt) == SQLITE_ROW)
+            {
                 workout.numSets      = sqlite3_column_int(stmt, 0);
                 workout.minReps      = sqlite3_column_int(stmt, 1);
                 workout.maxReps      = sqlite3_column_int(stmt, 2);
@@ -241,12 +262,18 @@ Database::WorkoutData Database::loadFullWorkoutData() {
                 e.Name,
                 e.Image,
                 e.Description,
+                e.BenchNotch,
+                e.MuscleGroup,
+                e.IsActive,
+                COALESCE(sl.WarmupWeight, 0.0),
                 COALESCE(sl.CurrentWeight, 0.0),
                 COALESCE(sl.Set_1_Reps, -1),
                 COALESCE(sl.Set_2_Reps, -1),
                 COALESCE(sl.Set_3_Reps, -1),
                 COALESCE(sl.Set_4_Reps, -1),
-                COALESCE(sl.Set_5_Reps, -1)
+                COALESCE(sl.Set_5_Reps, -1),
+                COALESCE(sl.NextWeight, 0.0),
+                COALESCE(sl.Notes, '')
             FROM Exercise e
             LEFT JOIN WorkoutLog sl
                 ON sl.exercise_id = e.id
@@ -260,14 +287,17 @@ Database::WorkoutData Database::loadFullWorkoutData() {
             ORDER BY e.id;
         )";
 
-        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK) {
-            while (sqlite3_step(stmt) == SQLITE_ROW) {
+        if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK)
+        {
+            while (sqlite3_step(stmt) == SQLITE_ROW)
+            {
                 WorkoutData::ExerciseEntry ex;
                 ex.exerciseId    = sqlite3_column_int(stmt, 0);
                 ex.name          = sqlite3_column_text(stmt, 1)
                                    ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1))
                                    : "";
-                if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
+                if (sqlite3_column_type(stmt, 2) != SQLITE_NULL)
+                {
                     const void* data = sqlite3_column_blob(stmt, 2);
                     int size = sqlite3_column_bytes(stmt, 2);
                     ex.image = QByteArray(static_cast<const char*>(data), size);
@@ -275,20 +305,42 @@ Database::WorkoutData Database::loadFullWorkoutData() {
                 ex.description   = sqlite3_column_text(stmt, 3)
                                    ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
                                    : "";
-                ex.currentWeight = sqlite3_column_double(stmt, 4);
+                ex.benchNotch    = sqlite3_column_text(stmt, 4)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4))
+                                   : "";
+                ex.muscleGroup   = sqlite3_column_text(stmt, 5)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))
+                                   : "";
+                ex.isActive      = sqlite3_column_int(stmt, 6) != 0;
+                ex.warmupWeight  = sqlite3_column_double(stmt, 7);
+                ex.currentWeight = sqlite3_column_double(stmt, 8);
 
                 ex.setReps = {
-                    sqlite3_column_int(stmt, 5),
-                    sqlite3_column_int(stmt, 6),
-                    sqlite3_column_int(stmt, 7),
-                    sqlite3_column_int(stmt, 8),
-                    sqlite3_column_int(stmt, 9)
+                    sqlite3_column_int(stmt, 9),
+                    sqlite3_column_int(stmt, 10),
+                    sqlite3_column_int(stmt, 11),
+                    sqlite3_column_int(stmt, 12),
+                    sqlite3_column_int(stmt, 13)
                 };
+
+                ex.nextWeight    = sqlite3_column_double(stmt, 14);
+                ex.notes         = sqlite3_column_text(stmt, 15)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 15))
+                                   : "";
 
                 workout.exercises.push_back(std::move(ex));
             }
             sqlite3_finalize(stmt);
         }
+    }
+    if (workout.exercises.empty()) return workout; // safety
+
+    // Carry-over: NextWeight from previous workout becomes CurrentWeight
+    for (auto& ex : workout.exercises)
+    {
+        if (ex.nextWeight > 0.0)          // only if we actually set a next weight before
+            ex.currentWeight = ex.nextWeight;
+        ex.nextWeight = ex.currentWeight;
     }
 
     return workout;

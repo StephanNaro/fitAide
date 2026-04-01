@@ -1,13 +1,14 @@
 #ifndef SETTINGSDIALOG_HPP
 #define SETTINGSDIALOG_HPP
 
-#include "database.hpp"
+#include "database/database.hpp"
 #include <QDialog>
-#include <QSlider>
 #include <QSpinBox>
+#include <QSlider>
 #include <QPushButton>
 
-class SettingsDialog : public QDialog {
+class SettingsDialog : public QDialog
+{
     Q_OBJECT
 public:
     explicit SettingsDialog(Database& db, QWidget* parent = nullptr);
@@ -28,4 +29,4 @@ private:
     bool saveSettings();
 };
 
-#endif // SETTINGSDIALOG_HPP
+#endif
