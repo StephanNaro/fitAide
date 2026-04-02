@@ -8,6 +8,15 @@ Database::Database(const std::string& db_path) : db_(nullptr)
     {
         std::cerr << "Cannot open database: " << sqlite3_errmsg(db_) << std::endl;
         db_ = nullptr;
+        return;
+    }
+
+    // IMPORTANT: Enable foreign key constraint enforcement
+    rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+    if (rc != SQLITE_OK)
+    {
+        std::cerr << "Failed to enable foreign keys: " << sqlite3_errmsg(db_) << std::endl;
+        // Continue anyway — but log it
     }
 }
 
@@ -78,6 +87,12 @@ bool Database::initialize()
         );
     )";
     if (!executeQuery(createWorkoutLog)) return false;
+
+    // Ensure foreign keys are enforced for this connection
+    if (sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr) != SQLITE_OK)
+    {
+        std::cerr << "Warning: Could not enable foreign key constraints" << std::endl;
+    }
 
     return true;
 }
