@@ -65,7 +65,6 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - Workout review / history viewer (instead of immediate close after last exercise)
 - Automatic weight progression suggestions
 - Add audible countdown finale
-- Improve QSettings usage (current registry path works but is unconventional)
 - Wrap insertWorkoutData in a transaction for better consistency
 - Show database/SQL errors in UI dialogs instead of only std::cerr
 - Graceful handling of duplicate exercise names in the exercise dialog

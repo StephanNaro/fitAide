@@ -17,11 +17,11 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    // Set application name for registry path
-    QSettings settings(
-        QStringLiteral("HKEY_CURRENT_USER\\Software\\%1").arg(fitAide::APP_NAME),
-        QSettings::NativeFormat
-    );
+    app.setOrganizationName("fitAide");
+    app.setApplicationName(fitAide::APP_NAME);
+
+    QSettings settings(QSettings::UserScope, "fitAide", fitAide::APP_NAME);
+
     QString dbPath = settings.value("DatabasePath", "").toString();
 
     // Check if path is valid (non-empty and file exists)
@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     if (!dbPath.isEmpty() && QFileInfo::exists(dbPath))
     {
         validPath = true;
-    } else {
-        // Prompt user for database file location with suggested filename
+    }
+    else {
         while (!validPath) {
             QFileDialog dialog(
                 nullptr,
@@ -47,15 +47,15 @@ int main(int argc, char* argv[])
                     nullptr, "Exit",
                     QStringLiteral("No database selected. Exit %1?").arg(fitAide::APP_NAME),
                     QMessageBox::Yes | QMessageBox::No);
+
                 if (reply == QMessageBox::Yes)
-                    return 0;          // or std::exit(0);
+                    return 0;
+
                 continue;
             }
 
             dbPath = dialog.selectedFiles().first();
-            // Path is valid (non-empty); no existence check needed for user selection
             validPath = true;
-            // Save valid path to registry
             settings.setValue("DatabasePath", dbPath);
         }
     }
