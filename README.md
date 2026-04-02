@@ -66,6 +66,5 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - Automatic weight progression suggestions
 - Add audible countdown finale
 - Show database/SQL errors in UI dialogs instead of only std::cerr
-- Graceful handling of duplicate exercise names in the exercise dialog
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.

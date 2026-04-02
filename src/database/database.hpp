@@ -11,12 +11,12 @@ class Database
 public:
     Database(const std::string& db_path);
     ~Database();
-    bool initialize();
-    bool hasExercises();
-    bool hasSettings();
-    bool insertExercise(const std::string& name, const std::string& description,
-                        const void* imageData = nullptr, int imageSize = 0);
-    bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
+
+    enum class DbError {
+        Ok,
+        DuplicateName,
+        Other
+    };
     struct WorkoutData {
         struct ExerciseEntry {
             int exerciseId = 0;
@@ -40,6 +40,14 @@ public:
         int maxReps = 12;
         int pauseSeconds = 120;
     };
+
+    bool initialize();
+    bool hasExercises();
+    bool hasSettings();
+    bool insertExercise(const std::string& name, const std::string& description,
+                        const void* imageData = nullptr, int imageSize = 0,
+                        DbError* outError = nullptr);
+    bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
     bool insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime);
     bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
     WorkoutData loadWorkoutData();

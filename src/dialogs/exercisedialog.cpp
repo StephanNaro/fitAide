@@ -80,25 +80,45 @@ bool ExerciseDialog::saveExercise()
         return false;
     }
 
-    bool success = db_.insertExercise(name.toStdString(), description.toStdString(),
+    Database::DbError dbError = Database::DbError::Ok;
+    bool success = db_.insertExercise(name.toStdString(), 
+                                      description.toStdString(),
                                       imageData_.isEmpty() ? nullptr : imageData_.constData(),
-                                      imageData_.size());
-    if (!success) {
-        QMessageBox::critical(this, "Error", "Failed to save exercise to database");
+                                      imageData_.size(),
+                                      &dbError);
+
+    if (success)
+        return true;
+
+    // Handle specific errors with user-friendly messages
+    if (dbError == Database::DbError::DuplicateName)
+    {
+        QMessageBox::warning(this, "Duplicate Exercise",
+            QString("An exercise with the name \"%1\" already exists.\n\n"
+                    "Please choose a different name.").arg(name));
     }
-    return success;
+    else
+    {
+        QMessageBox::critical(this, "Error", 
+            "Failed to save exercise to database.\n\n"
+            "Please try again or check the console for details.");
+    }
+
+    return false;
 }
 
 void ExerciseDialog::onNextClicked()
 {
     if (saveExercise())
     {
+        // Only clear on successful save
         nameEdit_->clear();
         imageLabel_->setText("No image");
         imageData_.clear();
         descriptionEdit_->clear();
-        nameEdit_->setFocus(); // Improve UX
+        nameEdit_->setFocus();
     }
+    // else: dialog stays open with the current values so user can fix the name
 }
 
 void ExerciseDialog::onDoneClicked()

@@ -148,33 +148,49 @@ bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSe
     return ok;
 }
 
-bool Database::insertExercise(const std::string& name, const std::string& description, const void* imageData, int imageSize)
+bool Database::insertExercise(const std::string& name, const std::string& description,
+                              const void* imageData, int imageSize, DbError* outError)
 {
-    sqlite3_stmt* stmt;
+    if (outError) *outError = DbError::Ok;
+
+    sqlite3_stmt* stmt = nullptr;
     const char* query = "INSERT INTO Exercise (Name, Image, Description) VALUES (?, ?, ?);";
+
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK)
     {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
+        std::cerr << "Failed to prepare insertExercise: " << sqlite3_errmsg(db_) << std::endl;
+        if (outError) *outError = DbError::Other;
         return false;
     }
 
     sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
     if (imageData && imageSize > 0)
-    {
         sqlite3_bind_blob(stmt, 2, imageData, imageSize, SQLITE_TRANSIENT);
-    } else {
+    else
         sqlite3_bind_null(stmt, 2);
-    }
+
     sqlite3_bind_text(stmt, 3, description.c_str(), -1, SQLITE_TRANSIENT);
 
-    if (sqlite3_step(stmt) != SQLITE_DONE)
-    {
-        std::cerr << "Failed to save exercise: " << sqlite3_errmsg(db_) << std::endl;
-        sqlite3_finalize(stmt);
-        return false;
-    }
+    int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    return true;
+
+    if (rc == SQLITE_DONE)
+        return true;
+
+    // Handle specific errors
+    const char* errMsg = sqlite3_errmsg(db_);
+    if (strstr(errMsg, "UNIQUE constraint failed") || 
+        strstr(errMsg, "constraint failed: Exercise.Name"))
+    {
+        if (outError) *outError = DbError::DuplicateName;
+    }
+    else
+    {
+        std::cerr << "Failed to save exercise: " << errMsg << std::endl;
+        if (outError) *outError = DbError::Other;
+    }
+
+    return false;
 }
 
 bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime)
