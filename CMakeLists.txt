@@ -1,63 +1,97 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.15)
 project(fitAide LANGUAGES CXX)
 
+# C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(PkgConfig REQUIRED)
+# Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql)
-pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
-
+set(NEEDED_QT_COMPONENTS Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Sql)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE HEADERS "${CMAKE_SOURCE_DIR}/src/*.hpp")
+# SQLite3
+find_package(SQLite3 REQUIRED)
 
-add_executable(fitAide ${SOURCES} ${HEADERS})
+# Sources
+set(SOURCES
+    src/fitAide.hpp
+    src/main.cpp
 
-target_link_libraries(fitAide PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Sql
-    PkgConfig::SQLITE3
+    src/database/database.cpp          src/database/database.hpp
+
+    src/dialogs/exercisedialog.cpp     src/dialogs/exercisedialog.hpp
+    src/dialogs/settingsdialog.cpp     src/dialogs/settingsdialog.hpp
+
+    src/views/workoutview.cpp          src/views/workoutview.hpp
+
+    src/widgets/exercisehead.cpp       src/widgets/exercisehead.hpp
+    src/widgets/exerciseinstruct.cpp   src/widgets/exerciseinstruct.hpp
+    src/widgets/exerciserecord.cpp     src/widgets/exerciserecord.hpp
+    src/widgets/exerciserecordreps.cpp src/widgets/exerciserecordreps.hpp
+    src/widgets/exerciserecordset.cpp  src/widgets/exerciserecordset.hpp
+    src/widgets/exercisestatus.cpp     src/widgets/exercisestatus.hpp
 )
 
+add_executable(fitAide ${SOURCES})
+
+# Include directories
 target_include_directories(fitAide PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${SQLITE3_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${SQLite3_INCLUDE_DIRS}
 )
 
-option(BUILD_DEVELOPMENT_MODE "Build in development mode" ON)
-if(BUILD_DEVELOPMENT_MODE)
-    target_compile_definitions(fitAide PRIVATE DEVELOPMENT_MODE)
-    set_target_properties(fitAide PROPERTIES OUTPUT_NAME "fitAideDev")
-    target_compile_options(fitAide PRIVATE -g -Wall -Wextra -DDEVELOPMENT_MODE)
-    target_link_options(fitAide PRIVATE -s)
-    #if(WIN32)
-    #    target_link_options(fitAide PRIVATE -mwindows)
-    #endif()
-else()
-    target_compile_options(fitAide PRIVATE -O2)
-    target_link_options(fitAide PRIVATE -s)
-    # if(WIN32)
-    #    target_link_options(fitAide PRIVATE -mwindows)
-    # endif()
+# Linking
+target_link_libraries(fitAide PRIVATE
+    ${NEEDED_QT_COMPONENTS}
+    SQLite3::SQLite3
+)
+
+# === Development vs Release handling (no more folder checks) ===
+# Use standard CMAKE_BUILD_TYPE (Debug / Release / RelWithDebInfo etc.)
+# DEVELOPMENT_MODE define is set automatically for Debug builds
+
+target_compile_definitions(fitAide PRIVATE
+    $<$<CONFIG:Debug>:DEVELOPMENT_MODE>
+)
+
+# Compiler options (cross-platform friendly)
+target_compile_options(fitAide PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+        -Wall -Wextra -Wpedantic
+        $<$<CONFIG:Debug>:-g>
+        $<$<CONFIG:Release>:-O2>
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4
+        $<$<CONFIG:Debug>:/Zi>
+        $<$<CONFIG:Release>:/O2>
+    >
+)
+
+# Strip symbols in Release (portable-ish)
+target_link_options(fitAide PRIVATE
+    $<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:Release>>:-s>
+)
+
+# Set executable name
+set_target_properties(fitAide PROPERTIES
+    OUTPUT_NAME "$<IF:$<CONFIG:Debug>,fitAideDev,fitAide>"
+)
+
+# Optional: Windows-specific to hide console in Release
+if(WIN32)
+    target_link_options(fitAide PRIVATE $<$<CONFIG:Release>:-mwindows>)
 endif()
 
-# Custom targets to run the executables
-add_custom_target(run_dev
+add_custom_target(run
     COMMAND "$<TARGET_FILE:fitAide>"
     DEPENDS fitAide
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     USES_TERMINAL
     VERBATIM
-    COMMENT "Running development executable..."
-)
-add_custom_target(run_release
-    COMMAND "$<TARGET_FILE:fitAide>"
-    DEPENDS fitAide
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-    USES_TERMINAL
-    VERBATIM
-    COMMENT "Running release executable..."
+    COMMENT "Running fitAide $<IF:$<CONFIG:Debug>,Development,Release> build..."
 )
