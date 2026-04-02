@@ -166,6 +166,13 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
 {
     if (workoutData.exercises.empty()) return true;
 
+    // Begin transaction
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK)
+    {
+        std::cerr << "Failed to begin transaction: " << sqlite3_errmsg(db_) << std::endl;
+        return false;
+    }
+
     sqlite3_stmt* stmt = nullptr;
     const char* query = R"(
         INSERT INTO WorkoutLog
@@ -176,9 +183,11 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
         VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
-    if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK)
+    bool prepareOk = (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) == SQLITE_OK);
+    if (!prepareOk)
     {
         std::cerr << "Failed to prepare insertWorkoutData: " << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
 
@@ -206,10 +215,28 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
             std::cerr << "Failed to insert exercise " << ex.exerciseId << ": "
                       << sqlite3_errmsg(db_) << std::endl;
             allOk = false;
+            break;                    // Stop on first error
         }
-        sqlite3_reset(stmt);
+
+        sqlite3_reset(stmt);          // Reset for next iteration
     }
+
     sqlite3_finalize(stmt);
+
+    // Commit or rollback
+    if (allOk)
+    {
+        if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK)
+        {
+            std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(db_) << std::endl;
+            allOk = false;
+        }
+    }
+    else
+    {
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+
     return allOk;
 }
 
