@@ -21,6 +21,8 @@ set(SOURCES
     src/fitAide.hpp
     src/main.cpp
 
+    src/utils/errorhelper.cpp          src/utils/errorhelper.hpp
+
     src/database/database.cpp          src/database/database.hpp
 
     src/dialogs/exercisedialog.cpp     src/dialogs/exercisedialog.hpp

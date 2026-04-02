@@ -1,4 +1,5 @@
 #include "fitAide.hpp"
+#include "utils/errorhelper.hpp"
 #include "database/database.hpp"
 #include "views/workoutview.hpp"
 #include "dialogs/exercisedialog.hpp"
@@ -64,7 +65,8 @@ int main(int argc, char* argv[])
     Database db(dbPath.toStdString());
     if (!db.initialize())
     {
-        std::cerr << "Failed to initialize database" << std::endl;
+        ErrorHelper::showError(nullptr, "Initialization Error",
+                               "Failed to initialize database schema.");
         return 1;
     }
 

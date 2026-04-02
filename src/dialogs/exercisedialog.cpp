@@ -81,7 +81,7 @@ bool ExerciseDialog::saveExercise()
     }
 
     Database::DbError dbError = Database::DbError::Ok;
-    bool success = db_.insertExercise(name.toStdString(), 
+    bool success = db_.insertExercise(name.toStdString(),
                                       description.toStdString(),
                                       imageData_.isEmpty() ? nullptr : imageData_.constData(),
                                       imageData_.size(),
@@ -99,7 +99,7 @@ bool ExerciseDialog::saveExercise()
     }
     else
     {
-        QMessageBox::critical(this, "Error", 
+        QMessageBox::critical(this, "Error",
             "Failed to save exercise to database.\n\n"
             "Please try again or check the console for details.");
     }

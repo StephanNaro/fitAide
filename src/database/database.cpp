@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "utils/errorhelper.hpp"
 #include <iostream>
 
 Database::Database(const std::string& db_path) : db_(nullptr)
@@ -6,7 +7,8 @@ Database::Database(const std::string& db_path) : db_(nullptr)
     int rc = sqlite3_open(db_path.c_str(), &db_);
     if (rc != SQLITE_OK)
     {
-        std::cerr << "Cannot open database: " << sqlite3_errmsg(db_) << std::endl;
+        QString err = QString::fromUtf8(sqlite3_errmsg(db_));
+        ErrorHelper::showDbError(nullptr, "open database", err);
         db_ = nullptr;
         return;
     }
@@ -34,8 +36,9 @@ bool Database::executeQuery(const std::string& query)
     int rc = sqlite3_exec(db_, query.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK)
     {
-        std::cerr << "SQL error: " << errMsg << std::endl;
+        QString msg = QString::fromUtf8(errMsg ? errMsg : "Unknown error");
         sqlite3_free(errMsg);
+        ErrorHelper::showDbError(nullptr, "execute schema query", msg);
         return false;
     }
     return true;
@@ -158,7 +161,7 @@ bool Database::insertExercise(const std::string& name, const std::string& descri
 
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK)
     {
-        std::cerr << "Failed to prepare insertExercise: " << sqlite3_errmsg(db_) << std::endl;
+        ErrorHelper::showDbError(nullptr, "save exercise", QString::fromUtf8(sqlite3_errmsg(db_)));
         if (outError) *outError = DbError::Other;
         return false;
     }
@@ -179,7 +182,7 @@ bool Database::insertExercise(const std::string& name, const std::string& descri
 
     // Handle specific errors
     const char* errMsg = sqlite3_errmsg(db_);
-    if (strstr(errMsg, "UNIQUE constraint failed") || 
+    if (strstr(errMsg, "UNIQUE constraint failed") ||
         strstr(errMsg, "constraint failed: Exercise.Name"))
     {
         if (outError) *outError = DbError::DuplicateName;
@@ -217,7 +220,7 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
     bool prepareOk = (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) == SQLITE_OK);
     if (!prepareOk)
     {
-        std::cerr << "Failed to prepare insertWorkoutData: " << sqlite3_errmsg(db_) << std::endl;
+        ErrorHelper::showDbError(nullptr, "prepare workout insert", QString::fromUtf8(sqlite3_errmsg(db_)));
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
@@ -243,8 +246,8 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
 
         if (sqlite3_step(stmt) != SQLITE_DONE)
         {
-            std::cerr << "Failed to insert exercise " << ex.exerciseId << ": "
-                      << sqlite3_errmsg(db_) << std::endl;
+            ErrorHelper::showDbError(nullptr, QString("insert exercise %1").arg(ex.exerciseId),
+                         QString::fromUtf8(sqlite3_errmsg(db_)));
             allOk = false;
             break;                    // Stop on first error
         }
@@ -259,7 +262,8 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
     {
         if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK)
         {
-            std::cerr << "Failed to commit transaction: " << sqlite3_errmsg(db_) << std::endl;
+            ErrorHelper::showDbError(nullptr, QString("commit transaction"),
+                         QString::fromUtf8(sqlite3_errmsg(db_)));
             allOk = false;
         }
     }

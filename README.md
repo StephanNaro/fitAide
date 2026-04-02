@@ -65,6 +65,5 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - Workout review / history viewer (instead of immediate close after last exercise)
 - Automatic weight progression suggestions
 - Add audible countdown finale
-- Show database/SQL errors in UI dialogs instead of only std::cerr
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.
