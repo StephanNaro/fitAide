@@ -65,7 +65,6 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - Automatic weight progression suggestions
 - Add audible countdown finale
 - Ideally, `restLabel_` in (`widgets/exerciserecord`) should be placed directly after whichever set the rest follows.
-- 48 Hour cooldown period.
 - Consider disabling an exercise's first set if the user starts editing the warmup weight field.
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.

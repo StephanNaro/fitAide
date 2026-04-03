@@ -1,6 +1,7 @@
 #include "database.hpp"
 #include "utils/errorhelper.hpp"
 #include <iostream>
+#include <QDateTime>
 
 Database::Database(const std::string& db_path) : db_(nullptr)
 {
@@ -292,6 +293,43 @@ bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& restSe
     }
     sqlite3_finalize(stmt);
     return false;
+}
+
+QString Database::getLastWorkoutTime() const
+{
+    if (!db_) return QString();
+
+    sqlite3_stmt* stmt = nullptr;
+    const char* q = "SELECT MAX(WorkoutEndedAt) FROM WorkoutLog WHERE user_id = 0;";
+
+    if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) != SQLITE_OK)
+        return QString();
+
+    QString lastTime;
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        const unsigned char* text = sqlite3_column_text(stmt, 0);
+        if (text)
+            lastTime = QString::fromUtf8(reinterpret_cast<const char*>(text));
+    }
+    sqlite3_finalize(stmt);
+    return lastTime;
+}
+
+bool Database::isCooldownActive() const
+{
+    QString lastTimeStr = getLastWorkoutTime();
+    if (lastTimeStr.isEmpty())
+        return false;   // no previous workout → no cooldown
+
+    QDateTime lastTime = QDateTime::fromString(lastTimeStr, "yyyy-MM-dd HH:mm:ss");
+    if (!lastTime.isValid())
+        return false;
+
+    QDateTime now = QDateTime::currentDateTime();
+    qint64 hoursDiff = lastTime.secsTo(now) / 3600;
+
+    return hoursDiff < 48;
 }
 
 Database::WorkoutData Database::loadWorkoutData()

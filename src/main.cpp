@@ -86,6 +86,28 @@ int main(int argc, char* argv[])
         }
     }
 
+    if (db.isCooldownActive())
+    {
+        QString lastTime = db.getLastWorkoutTime();
+        QDateTime lastDT = QDateTime::fromString(lastTime, "yyyy-MM-dd HH:mm:ss");
+
+        QString msg = QString("Your last workout was on %1.\n\n"
+                              "Only %2 hours have passed since then.\n\n"
+                              "It is recommended to wait at least 48 hours between workouts "
+                              "for the same muscle groups.\n\n"
+                              "Do you want to proceed anyway?")
+                          .arg(lastDT.toString("yyyy-MM-dd HH:mm"))
+                          .arg(lastDT.secsTo(QDateTime::currentDateTime()) / 3600);
+
+        auto reply = QMessageBox::warning(nullptr, "Cooldown Reminder",
+                                          msg,
+                                          QMessageBox::Yes | QMessageBox::No,
+                                          QMessageBox::No);
+
+        if (reply == QMessageBox::No)
+            return 0;   // exit app
+    }
+
     WorkoutView workoutView(db);
     workoutView.show();
     return app.exec();

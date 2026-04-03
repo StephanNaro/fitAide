@@ -50,6 +50,8 @@ public:
     bool insertSettings(int numSets, int minReps, int maxReps, int restSeconds);
     bool insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime);
     bool getSettings(int& numSets, int& minReps, int& maxReps, int& restSeconds);
+    QString getLastWorkoutTime() const;
+    bool isCooldownActive() const;
     WorkoutData loadWorkoutData();
     sqlite3* getDb() { return db_; }
 
