@@ -169,7 +169,7 @@ void ExerciseRecord::startRestTimer()
 
     if (restSeconds_ > 0 && restTimer_)
     {
-        restPrefix_ = isWorkoutFinale_ ? "Exiting in" : "Rest";
+        restPrefix_ = currentSetIndex_ == numSets_ - 1 && isWorkoutFinale_ ? "Exiting in" : "Rest";
         timerRemainingSeconds_ = restSeconds_;
         startARestTimerSecond();
     }

@@ -57,14 +57,17 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 ## Future / Possible Improvements
 
 - BenchNotch / rack position support
+- Ability to add 1–2 extra sets mid-workout
 - Notes field per exercise per workout
 - Muscle group categorization
 - Toggle exercises active/inactive
-- Ability to add 1–2 extra sets mid-workout
 - Workout review / history viewer (instead of immediate close after last exercise)
 - Automatic weight progression suggestions
 - Add audible countdown finale
-- Ideally, `restLabel_` in (`widgets/exerciserecord`) should be placed directly after whichever set the rest follows.
-- Consider disabling an exercise's first set if the user starts editing the warmup weight field.
+- `restLabel_` in (`widgets/exerciserecord`)
+  - Should be empty while in "preview" mode
+  - Should ideally be placed directly after whichever set the rest follows
+- Consider leaving the warmup and current weight LineEdits disabled until a set is chosen - this is currently confusing
+  - or: Consider disabling an exercise's first set if the user starts editing the warmup weight
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.
