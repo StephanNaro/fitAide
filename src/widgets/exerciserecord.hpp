@@ -7,10 +7,12 @@
 #include <QVector>
 #include <vector>
 #include <QVBoxLayout>
+#include <QValidator>
 #include <QLabel>
 #include <QTimer>
 #include <QLineEdit>
 
+class ExerciseRecordWarmup;
 class ExerciseRecordSet;
 class WorkoutView;
 
@@ -29,6 +31,8 @@ public:
 
     void enableRecording();
 
+    void startWarmupRest();
+
     void updateRepsValue(int setNum, int numReps);
 
     int numberOfSets() const { return numSets_; }
@@ -42,6 +46,7 @@ signals:
     void exerciseCompleted(Database::WorkoutData::ExerciseEntry* entry);
 
 private:
+    void createWarmup();
     void createSets();
     void createRestTimerAndLabel();
     void createWeightWidgets();
@@ -58,6 +63,11 @@ private:
     WorkoutView* parentWorkout_ = nullptr;
 
     QVBoxLayout* mainLayout_ = nullptr;
+    QDoubleValidator* validator_ = nullptr;
+
+    ExerciseRecordWarmup* warmupWidget_ = nullptr;
+    bool hasWarmedUp_ = false;
+    bool isWarmupRest_ = false;
 
     QVector<ExerciseRecordSet*> sets_;
     int currentSetIndex_ = 0;

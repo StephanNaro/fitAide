@@ -21,21 +21,22 @@ set(SOURCES
     src/fitAide.hpp
     src/main.cpp
 
-    src/utils/errorhelper.cpp          src/utils/errorhelper.hpp
+    src/utils/errorhelper.cpp            src/utils/errorhelper.hpp
 
-    src/database/database.cpp          src/database/database.hpp
+    src/database/database.cpp            src/database/database.hpp
 
-    src/dialogs/exercisedialog.cpp     src/dialogs/exercisedialog.hpp
-    src/dialogs/settingsdialog.cpp     src/dialogs/settingsdialog.hpp
+    src/dialogs/exercisedialog.cpp       src/dialogs/exercisedialog.hpp
+    src/dialogs/settingsdialog.cpp       src/dialogs/settingsdialog.hpp
 
-    src/views/workoutview.cpp          src/views/workoutview.hpp
+    src/views/workoutview.cpp            src/views/workoutview.hpp
 
-    src/widgets/exercisehead.cpp       src/widgets/exercisehead.hpp
-    src/widgets/exerciseinstruct.cpp   src/widgets/exerciseinstruct.hpp
-    src/widgets/exerciserecord.cpp     src/widgets/exerciserecord.hpp
-    src/widgets/exerciserecordreps.cpp src/widgets/exerciserecordreps.hpp
-    src/widgets/exerciserecordset.cpp  src/widgets/exerciserecordset.hpp
-    src/widgets/exercisestatus.cpp     src/widgets/exercisestatus.hpp
+    src/widgets/exercisehead.cpp         src/widgets/exercisehead.hpp
+    src/widgets/exerciseinstruct.cpp     src/widgets/exerciseinstruct.hpp
+    src/widgets/exerciserecord.cpp       src/widgets/exerciserecord.hpp
+    src/widgets/exerciserecordwarmup.cpp src/widgets/exerciserecord.cpp
+    src/widgets/exerciserecordreps.cpp   src/widgets/exerciserecordreps.hpp
+    src/widgets/exerciserecordset.cpp    src/widgets/exerciserecordset.hpp
+    src/widgets/exercisestatus.cpp       src/widgets/exercisestatus.hpp
 )
 
 add_executable(fitAide ${SOURCES})
