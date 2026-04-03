@@ -67,7 +67,7 @@ bool Database::initialize()
             NumSets          INTEGER DEFAULT 3,
             MinReps          INTEGER DEFAULT 8,
             MaxReps          INTEGER DEFAULT 12,
-            PauseSeconds     INTEGER DEFAULT 120
+            RestSeconds      INTEGER DEFAULT 120
         );
     )";
     if (!executeQuery(createSettings)) return false;
@@ -134,17 +134,17 @@ bool Database::hasExercises()
     return false;
 }
 
-bool Database::insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds)
+bool Database::insertSettings(int numSets, int minReps, int maxReps, int restSeconds)
 {
     sqlite3_stmt* stmt;
-    const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, PauseSeconds) "
+    const char* query = "INSERT OR REPLACE INTO Settings (user_id, NumSets, MinReps, MaxReps, RestSeconds) "
                         "VALUES (0, ?, ?, ?, ?);";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     sqlite3_bind_int(stmt, 1, numSets);
     sqlite3_bind_int(stmt, 2, minReps);
     sqlite3_bind_int(stmt, 3, maxReps);
-    sqlite3_bind_int(stmt, 4, pauseSeconds);
+    sqlite3_bind_int(stmt, 4, restSeconds);
 
     bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
@@ -275,10 +275,10 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
     return allOk;
 }
 
-bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds)
+bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& restSeconds)
 {
     sqlite3_stmt* stmt;
-    const char* query = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
+    const char* query = "SELECT NumSets, MinReps, MaxReps, RestSeconds FROM Settings WHERE user_id = 0;";
     if (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) != SQLITE_OK) return false;
 
     if (sqlite3_step(stmt) == SQLITE_ROW)
@@ -286,7 +286,7 @@ bool Database::getSettings(int& numSets, int& minReps, int& maxReps, int& pauseS
         numSets      = sqlite3_column_int(stmt, 0);
         minReps      = sqlite3_column_int(stmt, 1);
         maxReps      = sqlite3_column_int(stmt, 2);
-        pauseSeconds = sqlite3_column_int(stmt, 3);
+        restSeconds  = sqlite3_column_int(stmt, 3);
         sqlite3_finalize(stmt);
         return true;
     }
@@ -301,7 +301,7 @@ Database::WorkoutData Database::loadWorkoutData()
     // 1. Load settings
     {
         sqlite3_stmt* stmt = nullptr;
-        const char* q = "SELECT NumSets, MinReps, MaxReps, PauseSeconds FROM Settings WHERE user_id = 0;";
+        const char* q = "SELECT NumSets, MinReps, MaxReps, RestSeconds FROM Settings WHERE user_id = 0;";
         if (sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr) == SQLITE_OK)
         {
             if (sqlite3_step(stmt) == SQLITE_ROW)
@@ -309,7 +309,7 @@ Database::WorkoutData Database::loadWorkoutData()
                 workout.numSets      = sqlite3_column_int(stmt, 0);
                 workout.minReps      = sqlite3_column_int(stmt, 1);
                 workout.maxReps      = sqlite3_column_int(stmt, 2);
-                workout.pauseSeconds = sqlite3_column_int(stmt, 3);
+                workout.restSeconds  = sqlite3_column_int(stmt, 3);
             }
             sqlite3_finalize(stmt);
         }

@@ -23,7 +23,7 @@ public:
     explicit ExerciseRecord(int numSets,
                             int minReps,
                             int maxReps,
-                            int pauseSeconds,
+                            int restSeconds,
                             const std::vector<int>& currentReps,
                             Database::WorkoutData::ExerciseEntry* entry,
                             bool isWorkoutFinale,
@@ -56,7 +56,7 @@ private:
     int numSets_ = 0;
     int minReps_;
     int maxReps_;
-    int pauseSeconds_;
+    int restSeconds_;
     std::vector<int> currentReps_;
     Database::WorkoutData::ExerciseEntry* entry_ = nullptr;
     bool isWorkoutFinale_ = false;

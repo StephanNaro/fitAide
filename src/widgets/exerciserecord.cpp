@@ -7,7 +7,7 @@
 ExerciseRecord::ExerciseRecord(int numSets,
                                int minReps,
                                int maxReps,
-                               int pauseSeconds,
+                               int restSeconds,
                                const std::vector<int>& currentReps,
                                Database::WorkoutData::ExerciseEntry* entry,
                                bool isWorkoutFinale,
@@ -16,7 +16,7 @@ ExerciseRecord::ExerciseRecord(int numSets,
       numSets_(numSets),
       minReps_(minReps),
       maxReps_(maxReps),
-      pauseSeconds_(pauseSeconds),
+      restSeconds_(restSeconds),
       currentReps_(currentReps),
       entry_(entry),
       isWorkoutFinale_(isWorkoutFinale),
@@ -167,10 +167,10 @@ void ExerciseRecord::startRestTimer()
     if (timerIsRunning_) return;
     timerIsRunning_ = true;
 
-    if (pauseSeconds_ > 0 && restTimer_)
+    if (restSeconds_ > 0 && restTimer_)
     {
         restPrefix_ = isWorkoutFinale_ ? "Exiting in" : "Rest";
-        timerRemainingSeconds_ = pauseSeconds_;
+        timerRemainingSeconds_ = restSeconds_;
         startARestTimerSecond();
     }
 

@@ -23,8 +23,8 @@ private:
     QSlider* minRepsSlider_;
     QSpinBox* maxRepsSpin_;
     QSlider* maxRepsSlider_;
-    QSpinBox* pauseSpin_;
-    QSlider* pauseSlider_;
+    QSpinBox* restSpin_;
+    QSlider* restSlider_;
     QPushButton* doneButton_;
     bool saveSettings();
 };

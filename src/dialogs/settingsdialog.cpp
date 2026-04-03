@@ -49,19 +49,19 @@ SettingsDialog::SettingsDialog(Database& db, QWidget* parent)
     layout->addWidget(maxRepsSpin_);
     layout->addWidget(maxRepsSlider_);
 
-    // Pause
-    pauseSpin_ = new QSpinBox(this);
-    pauseSpin_->setRange(120, 300);
-    pauseSpin_->setValue(120);
-    pauseSpin_->setSuffix(" seconds");
-    pauseSlider_ = new QSlider(Qt::Horizontal, this);
-    pauseSlider_->setRange(120, 300);
-    pauseSlider_->setValue(120);
-    connect(pauseSlider_, &QSlider::valueChanged, pauseSpin_, &QSpinBox::setValue);
-    connect(pauseSpin_, &QSpinBox::valueChanged, pauseSlider_, &QSlider::setValue);
-    layout->addWidget(new QLabel("Pause Between Sets (120-300):", this));
-    layout->addWidget(pauseSpin_);
-    layout->addWidget(pauseSlider_);
+    // Rest
+    restSpin_ = new QSpinBox(this);
+    restSpin_->setRange(120, 300);
+    restSpin_->setValue(120);
+    restSpin_->setSuffix(" seconds");
+    restSlider_ = new QSlider(Qt::Horizontal, this);
+    restSlider_->setRange(120, 300);
+    restSlider_->setValue(120);
+    connect(restSlider_, &QSlider::valueChanged, restSpin_, &QSpinBox::setValue);
+    connect(restSpin_, &QSpinBox::valueChanged, restSlider_, &QSlider::setValue);
+    layout->addWidget(new QLabel("Rest Between Sets (120-300):", this));
+    layout->addWidget(restSpin_);
+    layout->addWidget(restSlider_);
 
     // Done Button
     auto* buttonLayout = new QHBoxLayout();
@@ -77,13 +77,13 @@ bool SettingsDialog::saveSettings()
     int numSets = numSetsSpin_->value();
     int minReps = minRepsSpin_->value();
     int maxReps = maxRepsSpin_->value();
-    int pauseSeconds = pauseSpin_->value();
+    int restSeconds = restSpin_->value();
     if (minReps > maxReps)
     {
         QMessageBox::warning(this, "Error", "Minimum reps cannot exceed maximum reps");
         return false;
     }
-    return db_.insertSettings(numSets, minReps, maxReps, pauseSeconds);
+    return db_.insertSettings(numSets, minReps, maxReps, restSeconds);
 }
 
 void SettingsDialog::onDoneClicked()

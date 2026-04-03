@@ -38,7 +38,7 @@ public:
         int numSets = 3;
         int minReps = 8;
         int maxReps = 12;
-        int pauseSeconds = 120;
+        int restSeconds = 120;
     };
 
     bool initialize();
@@ -47,9 +47,9 @@ public:
     bool insertExercise(const std::string& name, const std::string& description,
                         const void* imageData = nullptr, int imageSize = 0,
                         DbError* outError = nullptr);
-    bool insertSettings(int numSets, int minReps, int maxReps, int pauseSeconds);
+    bool insertSettings(int numSets, int minReps, int maxReps, int restSeconds);
     bool insertWorkoutData(const WorkoutData& workoutData, const std::string& workoutTime);
-    bool getSettings(int& numSets, int& minReps, int& maxReps, int& pauseSeconds);
+    bool getSettings(int& numSets, int& minReps, int& maxReps, int& restSeconds);
     WorkoutData loadWorkoutData();
     sqlite3* getDb() { return db_; }
 

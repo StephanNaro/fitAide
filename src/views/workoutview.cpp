@@ -76,7 +76,7 @@ void WorkoutView::createExerciseWidgets(int index,
     headOut = new ExerciseHead(QString::fromStdString(entry->name));
     instructOut = new ExerciseInstruct(QString::fromStdString(entry->description), entry->image);
     recordOut = new ExerciseRecord(workoutData_.numSets, workoutData_.minReps, workoutData_.maxReps,
-                                   workoutData_.pauseSeconds, entry->setReps, entry, isWorkoutFinale_, this);
+                                   workoutData_.restSeconds, entry->setReps, entry, isWorkoutFinale_, this);
 
     connect(recordOut, &ExerciseRecord::finalRestStarted,
             this, &WorkoutView::onExerciseFinalRestStarted);
