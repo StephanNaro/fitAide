@@ -47,7 +47,7 @@ ExerciseRecord::ExerciseRecord(int numSets,
 void ExerciseRecord::createWarmup()
 {
     if (!mainLayout_) return;
-    warmupWidget_ = new ExerciseRecordWarmup(entry_->warmupWeight, validator_, this);
+    warmupWidget_ = new ExerciseRecordWarmup(entry_->currentWeight, this);
     mainLayout_->addWidget(warmupWidget_);
 }
 
@@ -219,9 +219,6 @@ void ExerciseRecord::RestHasEnded()
         {
             if (entry_ && warmupWidget_)
             {
-                if (warmupWidget_ && hasWarmedUp_)
-                    entry_->warmupWeight = warmupWidget_->getWeight();
-
                 entry_->currentWeight = currentWeightEdit_->text().toDouble();
                 entry_->setReps = currentReps_;
                 entry_->nextWeight = nextWeightEdit_->text().toDouble();

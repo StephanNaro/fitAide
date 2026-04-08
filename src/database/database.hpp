@@ -23,7 +23,6 @@ public:
             std::string name;
             QByteArray image;
             std::string description;
-            double warmupWeight = 0.0;
             double currentWeight = 0.0;
             std::vector<int> setReps = std::vector<int>(5, -1);
             double nextWeight = 0.0;

@@ -1,52 +1,44 @@
 #include "exerciserecordwarmup.hpp"
 #include "exerciserecord.hpp"
 
-ExerciseRecordWarmup::ExerciseRecordWarmup(double weight, QDoubleValidator* validator, ExerciseRecord* parent)
-    : QWidget(parent),
-      parent_(parent),
-      hasBeenClicked_(false)
-{
-    if (!validator) return;
+#include <format>
+#include <iostream>
 
+ExerciseRecordWarmup::ExerciseRecordWarmup(double weight, ExerciseRecord* parent)
+    : QWidget(parent),
+      parent_(parent)
+{
     layout_ = new QHBoxLayout(this);
     layout_->setContentsMargins(4, 4, 4, 4);
     layout_->setSpacing(6);
-    createWidgets(weight, validator);
+    createWidgets(weight);
     this->setEnabled(false);
 }
 
-void ExerciseRecordWarmup::createWidgets(double weight, QDoubleValidator* validator)
+void ExerciseRecordWarmup::createWidgets(double weight)
 {
-    if (!validator || !layout_) return;
+    if (!layout_) return;
 
-    weightLabel_ = new QLabel("Warmup weight: ", this);
-    weightLabel_->setAlignment(Qt::AlignRight);
-
-    weightEdit_ = new QLineEdit(QString::number(weight, 'f', 2), this);
-    weightEdit_->setValidator(validator);
-    weightEdit_->setAlignment(Qt::AlignRight);
-    weightEdit_->setFixedWidth(110);
-
-    button_ = new QPushButton("Warmed Up", this);
-    connect(button_, &QPushButton::clicked, this, &ExerciseRecordWarmup::onButtonClicked);
+    double ten = weight * 0.10;
+    double twenty = weight * 0.20;
 
     fillerLabel_ = new QLabel("", this);
 
-    layout_->addWidget(weightLabel_);
-    layout_->addWidget(weightEdit_);
-    layout_->addWidget(button_);
-    layout_->addWidget(fillerLabel_);
-}
+    weightLabel_ = new QLabel(QString::fromStdString(std::format("Remove {:.2f} - {:.2f} kg for warmup of", ten, twenty)), this);
+    weightLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-double ExerciseRecordWarmup::getWeight() const
-{
-    return hasBeenClicked_ ? weightEdit_->text().toDouble() : 0.0;
+    button_ = new QPushButton("3-5 Reps", this);
+    weightLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    connect(button_, &QPushButton::clicked, this, &ExerciseRecordWarmup::onButtonClicked);
+
+    layout_->addWidget(fillerLabel_);
+    layout_->addWidget(weightLabel_);
+    layout_->addWidget(button_);
 }
 
 void ExerciseRecordWarmup::onButtonClicked()
 {
     if (!parent_) return;
     button_->setEnabled(false);
-    hasBeenClicked_ = true;
     parent_->startWarmupRest();
 }

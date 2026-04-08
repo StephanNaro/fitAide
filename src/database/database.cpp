@@ -78,7 +78,6 @@ bool Database::initialize()
             user_id          INTEGER NOT NULL DEFAULT 0,
             exercise_id      INTEGER NOT NULL REFERENCES Exercise(id),
             WorkoutEndedAt   TEXT NOT NULL,
-            WarmupWeight     REAL DEFAULT 0,
             CurrentWeight    REAL NOT NULL,
             Set_1_Reps       INTEGER NOT NULL DEFAULT -1,
             Set_2_Reps       INTEGER NOT NULL DEFAULT -1,
@@ -212,7 +211,7 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
     const char* query = R"(
         INSERT INTO WorkoutLog
             (user_id, exercise_id, WorkoutEndedAt,
-             WarmupWeight, CurrentWeight,
+             CurrentWeight,
              Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps,
              NextWeight, Notes)
         VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -235,15 +234,14 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
 
         sqlite3_bind_int   (stmt, 1, ex.exerciseId);
         sqlite3_bind_text  (stmt, 2, workoutTime.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_double(stmt, 3, ex.warmupWeight);
-        sqlite3_bind_double(stmt, 4, ex.currentWeight);
-        sqlite3_bind_int   (stmt, 5, reps[0]);
-        sqlite3_bind_int   (stmt, 6, reps[1]);
-        sqlite3_bind_int   (stmt, 7, reps[2]);
-        sqlite3_bind_int   (stmt, 8, reps[3]);
-        sqlite3_bind_int   (stmt, 9, reps[4]);
-        sqlite3_bind_double(stmt, 10, ex.nextWeight);
-        sqlite3_bind_text  (stmt, 11, ex.notes.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_double(stmt, 3, ex.currentWeight);
+        sqlite3_bind_int   (stmt, 4, reps[0]);
+        sqlite3_bind_int   (stmt, 5, reps[1]);
+        sqlite3_bind_int   (stmt, 6, reps[2]);
+        sqlite3_bind_int   (stmt, 7, reps[3]);
+        sqlite3_bind_int   (stmt, 8, reps[4]);
+        sqlite3_bind_double(stmt, 9, ex.nextWeight);
+        sqlite3_bind_text  (stmt, 10, ex.notes.c_str(), -1, SQLITE_TRANSIENT);
 
         if (sqlite3_step(stmt) != SQLITE_DONE)
         {
@@ -365,7 +363,6 @@ Database::WorkoutData Database::loadWorkoutData()
                 e.BenchNotch,
                 e.MuscleGroup,
                 e.IsActive,
-                COALESCE(sl.WarmupWeight, 0.0),
                 COALESCE(sl.CurrentWeight, 0.0),
                 COALESCE(sl.Set_1_Reps, -1),
                 COALESCE(sl.Set_2_Reps, -1),
@@ -412,20 +409,19 @@ Database::WorkoutData Database::loadWorkoutData()
                                    ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))
                                    : "";
                 ex.isActive      = sqlite3_column_int(stmt, 6) != 0;
-                ex.warmupWeight  = sqlite3_column_double(stmt, 7);
-                ex.currentWeight = sqlite3_column_double(stmt, 8);
+                ex.currentWeight = sqlite3_column_double(stmt, 7);
 
                 ex.setReps = {
+                    sqlite3_column_int(stmt, 8),
                     sqlite3_column_int(stmt, 9),
                     sqlite3_column_int(stmt, 10),
                     sqlite3_column_int(stmt, 11),
-                    sqlite3_column_int(stmt, 12),
-                    sqlite3_column_int(stmt, 13)
+                    sqlite3_column_int(stmt, 12)
                 };
 
-                ex.nextWeight    = sqlite3_column_double(stmt, 14);
-                ex.notes         = sqlite3_column_text(stmt, 15)
-                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 15))
+                ex.nextWeight    = sqlite3_column_double(stmt, 13);
+                ex.notes         = sqlite3_column_text(stmt, 14)
+                                   ? reinterpret_cast<const char*>(sqlite3_column_text(stmt, 14))
                                    : "";
 
                 workout.exercises.push_back(std::move(ex));

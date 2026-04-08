@@ -67,7 +67,5 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - `restLabel_` in (`widgets/exerciserecord`)
   - Should be empty while in "preview" mode
   - Should ideally be placed directly after whichever set the rest follows
-- Consider leaving the warmup and current weight LineEdits disabled until a set is chosen - this is currently confusing
-  - or: Consider disabling an exercise's first set if the user starts editing the warmup weight
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.
