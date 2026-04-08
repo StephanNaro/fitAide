@@ -141,6 +141,7 @@ void ExerciseRecord::enableRecording()
 
     enableSet(0);
     currentWeightEdit_->setEnabled(true);
+    currentWeightEdit_->setFocus();
 }
 
 void ExerciseRecord::startWarmupRest()
@@ -205,6 +206,7 @@ void ExerciseRecord::RestHasEnded()
         warmupWidget_->setEnabled(false);
         isWarmupRest_ = false;
         enableSet(0);
+        currentWeightEdit_->setFocus();
     }
     else
     {
