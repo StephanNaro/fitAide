@@ -60,12 +60,13 @@ This project is licensed under the **GNU General Public License v3.0** (GPL-3.0)
 - Ability to add 1–2 extra sets mid-workout
 - Notes field per exercise per workout
 - Muscle group categorization
-- Toggle exercises active/inactive
+- Toggle exercises active/inactive - probably via menu option to edit exercises
 - Workout review / history viewer (instead of immediate close after last exercise)
 - Automatic weight progression suggestions
 - Add audible countdown finale
 - `restLabel_` in (`widgets/exerciserecord`)
   - Should be empty while in "preview" mode
   - Should ideally be placed directly after whichever set the rest follows
+- Move Current Weight to before Warmup row; Update warmup label if current weight is changed
 
 These are optional enhancements. The current version focuses on a simple, reliable logging flow for personal use.
