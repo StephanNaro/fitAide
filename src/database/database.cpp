@@ -214,7 +214,7 @@ bool Database::insertWorkoutData(const WorkoutData& workoutData, const std::stri
              CurrentWeight,
              Set_1_Reps, Set_2_Reps, Set_3_Reps, Set_4_Reps, Set_5_Reps,
              NextWeight, Notes)
-        VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     bool prepareOk = (sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr) == SQLITE_OK);

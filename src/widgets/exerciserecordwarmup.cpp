@@ -24,7 +24,8 @@ void ExerciseRecordWarmup::createWidgets(double weight)
 
     fillerLabel_ = new QLabel("", this);
 
-    weightLabel_ = new QLabel(QString::fromStdString(std::format("Remove {:.2f} - {:.2f} kg for warmup of", ten, twenty)), this);
+    weightLabel_ = new QLabel(QString::fromStdString(std::format("Remove <b>{:.2f}</b> <small>- {:.2f}</small> kg for warmup of", ten, twenty)), this);
+    weightLabel_->setTextFormat(Qt::RichText);
     weightLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     button_ = new QPushButton("3-5 Reps", this);
